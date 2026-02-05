@@ -1,0 +1,482 @@
+import DashboardLayout from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { trpc } from "@/lib/trpc";
+import { Edit, FileText, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+const statusMap = {
+  pending: "Pendente",
+  approved: "Aprovado",
+  in_production: "Em Produção",
+  completed: "Concluído",
+  cancelled: "Cancelado",
+};
+
+const statusColors = {
+  pending: "status-pending",
+  approved: "status-approved",
+  in_production: "status-in-production",
+  completed: "status-completed",
+  cancelled: "status-cancelled",
+};
+
+export default function Orders() {
+  const [open, setOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    customerId: "",
+    orderNumber: "",
+    items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
+    notes: "",
+  });
+
+  const { data: orders, isLoading, refetch } = trpc.orders.list.useQuery();
+  const { data: customers } = trpc.customers.list.useQuery();
+  const { data: products } = trpc.products.list.useQuery({ activeOnly: true });
+
+  const createMutation = trpc.orders.create.useMutation({
+    onSuccess: () => {
+      toast.success("Pedido criado com sucesso!");
+      refetch();
+      setOpen(false);
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Erro ao criar pedido: " + error.message);
+    },
+  });
+
+  const updateMutation = trpc.orders.update.useMutation({
+    onSuccess: () => {
+      toast.success("Pedido atualizado com sucesso!");
+      refetch();
+      setOpen(false);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao atualizar pedido: " + error.message);
+    },
+  });
+
+  const updateStatusMutation = trpc.orders.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Status atualizado com sucesso!");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar status: " + error.message);
+    },
+  });
+
+  const deleteMutation = trpc.orders.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Pedido excluído com sucesso!");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao excluir pedido: " + error.message);
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      customerId: "",
+      orderNumber: "",
+      items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
+      notes: "",
+    });
+    setEditingOrder(null);
+  };
+
+  const addItem = () => {
+    setFormData({
+      ...formData,
+      items: [...formData.items, { productId: "", quantity: "", unitPrice: "", subtotal: "" }],
+    });
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = formData.items.filter((_, i) => i !== index);
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const updateItem = (index: number, field: string, value: string) => {
+    const newItems = [...formData.items];
+    newItems[index] = { ...newItems[index], [field]: value };
+
+    if (field === "productId") {
+      const product = products?.find((p) => p.id === parseInt(value));
+      if (product) {
+        newItems[index].unitPrice = product.price;
+      }
+    }
+
+    if (field === "quantity" || field === "unitPrice") {
+      const qty = parseFloat(newItems[index].quantity || "0");
+      const price = parseFloat(newItems[index].unitPrice || "0");
+      newItems[index].subtotal = (qty * price).toFixed(2);
+    }
+
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const calculateTotal = () => {
+    return formData.items.reduce((sum, item) => sum + parseFloat(item.subtotal || "0"), 0).toFixed(2);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const totalAmount = calculateTotal();
+    const data = {
+      customerId: parseInt(formData.customerId),
+      orderNumber: formData.orderNumber,
+      items: formData.items.map((item) => ({
+        productId: parseInt(item.productId),
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        subtotal: item.subtotal,
+      })),
+      totalAmount,
+      notes: formData.notes,
+    };
+
+    if (editingOrder) {
+      updateMutation.mutate({ id: editingOrder.id, ...data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleStatusChange = (orderId: number, status: string) => {
+    updateStatusMutation.mutate({ id: orderId, status: status as any });
+  };
+
+  const handleEdit = (row: any) => {
+    setEditingOrder(row.order);
+    
+    // Se o pedido tem items, popular o formulário
+    if (row.items && row.items.length > 0) {
+      setFormData({
+        customerId: row.order.customerId ? row.order.customerId.toString() : "",
+        orderNumber: row.order.orderNumber,
+        items: row.items.map((item: any) => ({
+          productId: item.item.productId.toString(),
+          quantity: item.item.quantity,
+          unitPrice: item.item.unitPrice,
+          subtotal: item.item.subtotal,
+        })),
+        notes: row.order.notes || "",
+      });
+    } else {
+      // Se não tem items, usar dados básicos
+      setFormData({
+        customerId: row.order.customerId ? row.order.customerId.toString() : "",
+        orderNumber: row.order.orderNumber,
+        items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
+        notes: row.order.notes || "",
+      });
+    }
+    
+    setOpen(true);
+  };
+
+  const formatPrice = (price: string) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(parseFloat(price));
+  };
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("pt-BR");
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Pedidos</h1>
+            <p className="text-muted-foreground">
+              Gerencie pedidos de vendas e acompanhe o pipeline
+            </p>
+          </div>
+          <Dialog open={open} onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Pedido
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingOrder ? "Editar Pedido" : "Novo Pedido"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="orderNumber">Número do Pedido *</Label>
+                    <Input
+                      id="orderNumber"
+                      value={formData.orderNumber}
+                      onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customerId">Cliente *</Label>
+                    <Select
+                      value={formData.customerId}
+                      onValueChange={(value) => setFormData({ ...formData, customerId: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers?.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id.toString()}>
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Itens do Pedido *</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Adicionar Item
+                    </Button>
+                  </div>
+
+                  {formData.items.map((item, index) => (
+                    <Card key={index}>
+                      <CardContent className="pt-4">
+                        <div className="grid grid-cols-5 gap-4">
+                          <div className="col-span-2 space-y-2">
+                            <Label>Produto</Label>
+                            <Select
+                              value={item.productId}
+                              onValueChange={(value) => updateItem(index, "productId", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products?.map((product) => (
+                                  <SelectItem key={product.id} value={product.id.toString()}>
+                                    {product.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Quantidade</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Preço Unit.</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Subtotal</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.subtotal}
+                                readOnly
+                                className="bg-muted"
+                              />
+                              {formData.items.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeItem(index)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  <div className="flex justify-end">
+                    <div className="text-lg font-semibold">
+                      Total: {formatPrice(calculateTotal())}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    Criar Pedido
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Pedidos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando pedidos...
+              </div>
+            ) : !orders || orders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum pedido cadastrado. Clique em "Novo Pedido" para começar.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Número</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((row) => (
+                      <TableRow key={row.order.id}>
+                        <TableCell className="font-medium">{row.order.orderNumber}</TableCell>
+                        <TableCell>{row.customer?.name || "-"}</TableCell>
+                        <TableCell>{formatDate(row.order.orderDate)}</TableCell>
+                        <TableCell>{formatPrice(row.order.totalAmount)}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={row.order.status}
+                            onValueChange={(value) => handleStatusChange(row.order.id, value)}
+                          >
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue>
+                                <span className={`status-badge ${statusColors[row.order.status]}`}>
+                                  {statusMap[row.order.status]}
+                                </span>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(statusMap).map(([key, label]) => (
+                                <SelectItem key={key} value={key}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => window.open(`/orders/${row.order.id}/print`, '_blank')}
+                              title="Ver PDF"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleEdit(row)}
+                              title="Editar"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            {row.order.status === 'cancelled' && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => {
+                                  if (confirm('Tem certeza que deseja excluir este pedido cancelado?')) {
+                                    deleteMutation.mutate({ id: row.order.id });
+                                  }
+                                }}
+                                title="Excluir"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+}

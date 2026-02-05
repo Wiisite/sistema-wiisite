@@ -1,0 +1,13 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%financ%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3DheQjNu9yMqQAJ.root --database ewBM9VC89HUfxkDU9b2X4o --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%financ%';",
+  "rows": [
+    {
+      "TABLE_NAME": "financialCategories"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nfinancialCategories\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

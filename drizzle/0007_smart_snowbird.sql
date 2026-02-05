@@ -1,0 +1,1 @@
+ALTER TABLE `budgets` MODIFY COLUMN `status` enum('draft','sent','approved','rejected','converted') NOT NULL DEFAULT 'draft';

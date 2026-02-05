@@ -1,0 +1,1 @@
+ALTER TABLE `budgets` ADD `budgetNumber` varchar(50) NOT NULL;

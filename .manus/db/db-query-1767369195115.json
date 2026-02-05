@@ -1,0 +1,322 @@
+{
+  "query": "SHOW COLUMNS FROM budgets",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3DheQjNu9yMqQAJ.root --database ewBM9VC89HUfxkDU9b2X4o --execute SHOW COLUMNS FROM budgets",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "customerId",
+      "Type": "int(11)",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "title",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "description",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "laborCost",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00",
+      "Extra": ""
+    },
+    {
+      "Field": "laborHours",
+      "Type": "decimal(8,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00",
+      "Extra": ""
+    },
+    {
+      "Field": "materialCost",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00",
+      "Extra": ""
+    },
+    {
+      "Field": "thirdPartyCost",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00",
+      "Extra": ""
+    },
+    {
+      "Field": "otherDirectCosts",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00",
+      "Extra": ""
+    },
+    {
+      "Field": "indirectCostsTotal",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0.00",
+      "Extra": ""
+    },
+    {
+      "Field": "profitMargin",
+      "Type": "decimal(5,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "20.00",
+      "Extra": ""
+    },
+    {
+      "Field": "cbsRate",
+      "Type": "decimal(5,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ibsRate",
+      "Type": "decimal(5,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "irpjRate",
+      "Type": "decimal(5,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "csllRate",
+      "Type": "decimal(5,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "totalDirectCosts",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "totalCosts",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "grossValue",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "cbsAmount",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ibsAmount",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "totalConsumptionTaxes",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "netRevenue",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "profitBeforeTaxes",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "irpjAmount",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "csllAmount",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "netProfit",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "finalPrice",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "taxRegime",
+      "Type": "enum('new','old','transition')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "new",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('draft','sent','approved','rejected','converted')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "draft",
+      "Extra": ""
+    },
+    {
+      "Field": "validUntil",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "notes",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdBy",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "customerName",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "customerEmail",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "customerPhone",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "customerAddress",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "budgetNumber",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint(11)\tNO\tPRI\tNULL\tauto_increment\ncustomerId\tint(11)\tYES\tMUL\tNULL\t\ntitle\tvarchar(255)\tNO\t\tNULL\t\ndescription\ttext\tYES\t\tNULL\t\nlaborCost\tdecimal(10,2)\tNO\t\t0.00\t\nlaborHours\tdecimal(8,2)\tNO\t\t0.00\t\nmaterialCost\tdecimal(10,2)\tNO\t\t0.00\t\nthirdPartyCost\tdecimal(10,2)\tNO\t\t0.00\t\notherDirectCosts\tdecimal(10,2)\tNO\t\t0.00\t\nindirectCostsTotal\tdecimal(10,2)\tNO\t\t0.00\t\nprofitMargin\tdecimal(5,2)\tNO\t\t20.00\t\ncbsRate\tdecimal(5,2)\tNO\t\tNULL\t\nibsRate\tdecimal(5,2)\tNO\t\tNULL\t\nirpjRate\tdecimal(5,2)\tNO\t\tNULL\t\ncsllRate\tdecimal(5,2)\tNO\t\tNULL\t\ntotalDirectCosts\tdecimal(10,2)\tNO\t\tNULL\t\ntotalCosts\tdecimal(10,2)\tNO\t\tNULL\t\ngrossValue\tdecimal(10,2)\tNO\t\tNULL\t\ncbsAmount\tdecimal(10,2)\tNO\t\tNULL\t\nibsAmount\tdecimal(10,2)\tNO\t\tNULL\t\ntotalConsumptionTaxes\tdecimal(10,2)\tNO\t\tNULL\t\nnetRevenue\tdecimal(10,2)\tNO\t\tNULL\t\nprofitBeforeTaxes\tdecimal(10,2)\tNO\t\tNULL\t\nirpjAmount\tdecimal(10,2)\tNO\t\tNULL\t\ncsllAmount\tdecimal(10,2)\tNO\t\tNULL\t\nnetProfit\tdecimal(10,2)\tNO\t\tNULL\t\nfinalPrice\tdecimal(10,2)\tNO\t\tNULL\t\ntaxRegime\tenum('new','old','transition')\tNO\t\tnew\t\nstatus\tenum('draft','sent','approved','rejected','converted')\tNO\t\tdraft\t\nvalidUntil\ttimestamp\tYES\t\tNULL\t\nnotes\ttext\tYES\t\tNULL\t\ncreatedBy\tint(11)\tNO\tMUL\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\ncustomerName\tvarchar(255)\tYES\t\tNULL\t\ncustomerEmail\tvarchar(255)\tYES\t\tNULL\t\ncustomerPhone\tvarchar(50)\tYES\t\tNULL\t\ncustomerAddress\ttext\tYES\t\tNULL\t\nbudgetNumber\tvarchar(50)\tNO\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

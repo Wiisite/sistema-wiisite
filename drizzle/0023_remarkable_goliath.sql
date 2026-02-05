@@ -1,0 +1,2 @@
+ALTER TABLE `contracts` MODIFY COLUMN `contractType` enum('maintenance','hosting','support','software_license','other') NOT NULL DEFAULT 'other';--> statement-breakpoint
+ALTER TABLE `contracts` ADD `contractContent` text;

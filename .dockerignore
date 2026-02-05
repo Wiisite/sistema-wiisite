@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.env
+.env.*
+*.md
+!DEPLOY.md
+!VPS_SETUP.md
+!EASYPANEL_GUIDE.md

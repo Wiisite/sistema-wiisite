@@ -1,0 +1,1 @@
+ALTER TABLE `accountsPayable` MODIFY COLUMN `supplierId` int;

@@ -1,0 +1,1 @@
+ALTER TABLE `budgets` ADD `laborRate` decimal(10,2) DEFAULT '0.00' NOT NULL;
