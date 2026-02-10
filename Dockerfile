@@ -1,4 +1,4 @@
-# Build stage - Updated Feb 10 2026
+# Build stage
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -19,6 +19,9 @@ COPY . .
 # Build application
 RUN pnpm run build
 
+# Prune dev dependencies
+RUN pnpm prune --prod
+
 # Production stage
 FROM node:20-alpine AS runner
 
@@ -26,20 +29,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install pnpm
-RUN npm install -g pnpm
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-COPY patches ./patches
-
-# Install production dependencies only
-RUN pnpm install --prod
-
-# Copy built artifacts from builder
+# Copy built artifacts and production node_modules from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
 
 # Create uploads directory
 RUN mkdir -p uploads
