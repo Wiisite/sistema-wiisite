@@ -57,7 +57,22 @@ import {
   budgetTemplates,
   InsertBudgetTemplate,
   taxSettings,
-  InsertTaxSetting
+  InsertTaxSetting,
+  companySettings,
+  InsertCompanySetting,
+  OrderStatus,
+  AccountPayableStatus,
+  AccountReceivableStatus,
+  ProjectStatus,
+  LeadStage,
+  ProposalStatus,
+  ContractStatus,
+  TaskStatus,
+  TicketStatus,
+  RecurringExpenseStatus,
+  RecurringExpenseCategory,
+  SubscriptionStatus,
+  BudgetStatus
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -66,7 +81,9 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // Adicionar configuração para suportar pacotes maiores
+      const connectionUrl = process.env.DATABASE_URL;
+      _db = drizzle(connectionUrl);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -162,7 +179,7 @@ export async function getCustomers(userId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(customers).orderBy(desc(customers.createdAt));
+  return await db.select().from(customers).where(eq(customers.createdBy, userId)).orderBy(desc(customers.createdAt));
 }
 
 export async function getCustomerById(id: number) {
@@ -245,18 +262,13 @@ export async function createOrder(order: InsertOrder, items: Omit<InsertOrderIte
   return orderId;
 }
 
-export async function getOrders(filters?: { status?: string; startDate?: Date; endDate?: Date }) {
+export async function getOrders(filters?: { status?: OrderStatus; startDate?: Date; endDate?: Date }) {
   const db = await getDb();
   if (!db) return [];
   
-  let query = db.select({
-    order: orders,
-    customer: customers
-  }).from(orders).leftJoin(customers, eq(orders.customerId, customers.id));
-  
   const conditions = [];
   if (filters?.status) {
-    conditions.push(eq(orders.status, filters.status as any));
+    conditions.push(eq(orders.status, filters.status));
   }
   if (filters?.startDate) {
     conditions.push(gte(orders.orderDate, filters.startDate));
@@ -265,11 +277,16 @@ export async function getOrders(filters?: { status?: string; startDate?: Date; e
     conditions.push(lte(orders.orderDate, filters.endDate));
   }
   
+  const baseQuery = db.select({
+    order: orders,
+    customer: customers
+  }).from(orders).leftJoin(customers, eq(orders.customerId, customers.id));
+  
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(orders.createdAt));
   }
   
-  return await query.orderBy(desc(orders.createdAt));
+  return await baseQuery.orderBy(desc(orders.createdAt));
 }
 
 export async function getOrderById(id: number) {
@@ -299,11 +316,11 @@ export async function getOrderById(id: number) {
   };
 }
 
-export async function updateOrderStatus(id: number, status: string) {
+export async function updateOrderStatus(id: number, status: OrderStatus) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  return await db.update(orders).set({ status: status as any }).where(eq(orders.id, id));
+  return await db.update(orders).set({ status }).where(eq(orders.id, id));
 }
 
 export async function updateOrder(
@@ -457,21 +474,13 @@ export async function createAccountPayableWithInstallments(data: InsertAccountPa
   return { success: true, installmentsCreated: installments };
 }
 
-export async function getAccountsPayable(filters?: { status?: string; startDate?: Date; endDate?: Date }) {
+export async function getAccountsPayable(filters?: { status?: AccountPayableStatus; startDate?: Date; endDate?: Date }) {
   const db = await getDb();
   if (!db) return [];
   
-  let query = db.select({
-    account: accountsPayable,
-    supplier: suppliers,
-    category: financialCategories
-  }).from(accountsPayable)
-    .leftJoin(suppliers, eq(accountsPayable.supplierId, suppliers.id))
-    .leftJoin(financialCategories, eq(accountsPayable.categoryId, financialCategories.id));
-  
   const conditions = [];
   if (filters?.status) {
-    conditions.push(eq(accountsPayable.status, filters.status as any));
+    conditions.push(eq(accountsPayable.status, filters.status));
   }
   if (filters?.startDate) {
     conditions.push(gte(accountsPayable.dueDate, filters.startDate));
@@ -480,11 +489,19 @@ export async function getAccountsPayable(filters?: { status?: string; startDate?
     conditions.push(lte(accountsPayable.dueDate, filters.endDate));
   }
   
+  const baseQuery = db.select({
+    account: accountsPayable,
+    supplier: suppliers,
+    category: financialCategories
+  }).from(accountsPayable)
+    .leftJoin(suppliers, eq(accountsPayable.supplierId, suppliers.id))
+    .leftJoin(financialCategories, eq(accountsPayable.categoryId, financialCategories.id));
+  
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(accountsPayable.dueDate));
   }
   
-  return await query.orderBy(desc(accountsPayable.dueDate));
+  return await baseQuery.orderBy(desc(accountsPayable.dueDate));
 }
 
 export async function updateAccountPayable(id: number, data: Partial<InsertAccountPayable>) {
@@ -580,21 +597,13 @@ export async function createAccountReceivableWithInstallments(data: InsertAccoun
   return { success: true, installmentsCreated: installments };
 }
 
-export async function getAccountsReceivable(filters?: { status?: string; startDate?: Date; endDate?: Date }) {
+export async function getAccountsReceivable(filters?: { status?: AccountReceivableStatus; startDate?: Date; endDate?: Date }) {
   const db = await getDb();
   if (!db) return [];
   
-  let query = db.select({
-    account: accountsReceivable,
-    customer: customers,
-    order: orders
-  }).from(accountsReceivable)
-    .leftJoin(customers, eq(accountsReceivable.customerId, customers.id))
-    .leftJoin(orders, eq(accountsReceivable.orderId, orders.id));
-  
   const conditions = [];
   if (filters?.status) {
-    conditions.push(eq(accountsReceivable.status, filters.status as any));
+    conditions.push(eq(accountsReceivable.status, filters.status));
   }
   if (filters?.startDate) {
     conditions.push(gte(accountsReceivable.dueDate, filters.startDate));
@@ -603,11 +612,19 @@ export async function getAccountsReceivable(filters?: { status?: string; startDa
     conditions.push(lte(accountsReceivable.dueDate, filters.endDate));
   }
   
+  const baseQuery = db.select({
+    account: accountsReceivable,
+    customer: customers,
+    order: orders
+  }).from(accountsReceivable)
+    .leftJoin(customers, eq(accountsReceivable.customerId, customers.id))
+    .leftJoin(orders, eq(accountsReceivable.orderId, orders.id));
+  
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(accountsReceivable.dueDate));
   }
   
-  return await query.orderBy(desc(accountsReceivable.dueDate));
+  return await baseQuery.orderBy(desc(accountsReceivable.dueDate));
 }
 
 export async function updateAccountReceivable(id: number, data: Partial<InsertAccountReceivable>) {
@@ -686,20 +703,20 @@ export async function getDashboardStats(startDate?: Date, endDate?: Date) {
 
 // ============ PROJECT HELPERS ============
 
-export async function getProjects(filters?: { status?: string }) {
+export async function getProjects(filters?: { status?: ProjectStatus }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const baseQuery = db.select({
     project: projects,
     customer: customers,
   }).from(projects).leftJoin(customers, eq(projects.customerId, customers.id));
 
   if (filters?.status) {
-    query = query.where(eq(projects.status, filters.status as any)) as any;
+    return await baseQuery.where(eq(projects.status, filters.status)).orderBy(desc(projects.createdAt));
   }
 
-  return await query.orderBy(desc(projects.createdAt));
+  return await baseQuery.orderBy(desc(projects.createdAt));
 }
 
 export async function createProject(project: InsertProject) {
@@ -731,7 +748,7 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
   if (!db) return [];
 
   // Buscar eventos do calendário
-  let eventsQuery = db.select({
+  const eventsBaseQuery = db.select({
     event: calendarEvents,
     customer: customers,
     project: projects,
@@ -739,37 +756,29 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
     .leftJoin(customers, eq(calendarEvents.customerId, customers.id))
     .leftJoin(projects, eq(calendarEvents.projectId, projects.id));
 
-  if (filters?.startDate && filters?.endDate) {
-    eventsQuery = eventsQuery.where(
-      and(
+  const events = filters?.startDate && filters?.endDate
+    ? await eventsBaseQuery.where(and(
         gte(calendarEvents.startDate, filters.startDate),
         lte(calendarEvents.endDate, filters.endDate)
-      )
-    ) as any;
-  }
-
-  const events = await eventsQuery.orderBy(calendarEvents.startDate);
+      )).orderBy(calendarEvents.startDate)
+    : await eventsBaseQuery.orderBy(calendarEvents.startDate);
 
   // Buscar tarefas com prazo
-  let tasksQuery = db.select({
+  const tasksBaseQuery = db.select({
     task: tasks,
     project: projects,
   }).from(tasks)
     .leftJoin(projects, eq(tasks.projectId, projects.id));
 
-  if (filters?.startDate && filters?.endDate) {
-    tasksQuery = tasksQuery.where(
-      and(
+  const tasksData = filters?.startDate && filters?.endDate
+    ? await tasksBaseQuery.where(and(
         gte(tasks.dueDate, filters.startDate),
         lte(tasks.dueDate, filters.endDate)
-      )
-    ) as any;
-  }
-
-  const tasksData = await tasksQuery.orderBy(tasks.dueDate);
+      )).orderBy(tasks.dueDate)
+    : await tasksBaseQuery.orderBy(tasks.dueDate);
 
   // Buscar contas a pagar com vencimento
-  let payablesQuery = db.select({
+  const payablesBaseQuery = db.select({
     payable: accountsPayable,
     supplier: suppliers,
     category: financialCategories,
@@ -777,19 +786,15 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
     .leftJoin(suppliers, eq(accountsPayable.supplierId, suppliers.id))
     .leftJoin(financialCategories, eq(accountsPayable.categoryId, financialCategories.id));
 
-  if (filters?.startDate && filters?.endDate) {
-    payablesQuery = payablesQuery.where(
-      and(
+  const payables = filters?.startDate && filters?.endDate
+    ? await payablesBaseQuery.where(and(
         gte(accountsPayable.dueDate, filters.startDate),
         lte(accountsPayable.dueDate, filters.endDate)
-      )
-    ) as any;
-  }
-
-  const payables = await payablesQuery.orderBy(accountsPayable.dueDate);
+      )).orderBy(accountsPayable.dueDate)
+    : await payablesBaseQuery.orderBy(accountsPayable.dueDate);
 
   // Buscar contas a receber com vencimento
-  let receivablesQuery = db.select({
+  const receivablesBaseQuery = db.select({
     receivable: accountsReceivable,
     customer: customers,
     order: orders,
@@ -797,16 +802,12 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
     .leftJoin(customers, eq(accountsReceivable.customerId, customers.id))
     .leftJoin(orders, eq(accountsReceivable.orderId, orders.id));
 
-  if (filters?.startDate && filters?.endDate) {
-    receivablesQuery = receivablesQuery.where(
-      and(
+  const receivables = filters?.startDate && filters?.endDate
+    ? await receivablesBaseQuery.where(and(
         gte(accountsReceivable.dueDate, filters.startDate),
         lte(accountsReceivable.dueDate, filters.endDate)
-      )
-    ) as any;
-  }
-
-  const receivables = await receivablesQuery.orderBy(accountsReceivable.dueDate);
+      )).orderBy(accountsReceivable.dueDate)
+    : await receivablesBaseQuery.orderBy(accountsReceivable.dueDate);
 
   // Buscar despesas recorrentes ativas
   const recurringExpensesData = await db.select({
@@ -973,13 +974,14 @@ export async function getMonthlyCashFlow(year: number) {
       GROUP BY MONTH(paymentDate)
     `);
     
-    const receivablesData = (receivables[0] as unknown) as any[];
-    const payablesData = (payables[0] as unknown) as any[];
+    interface MonthlyAmount { month: number; amount: string }
+    const receivablesData = (receivables[0] as unknown) as MonthlyAmount[];
+    const payablesData = (payables[0] as unknown) as MonthlyAmount[];
     
     const cashFlow = [];
     for (let month = 1; month <= 12; month++) {
-      const income = receivablesData.find((r: any) => r.month === month);
-      const expense = payablesData.find((p: any) => p.month === month);
+      const income = receivablesData.find((r) => r.month === month);
+      const expense = payablesData.find((p) => p.month === month);
       
       cashFlow.push({
         month,
@@ -1159,26 +1161,26 @@ export async function getMonthlyFinancialAlerts(year: number, month: number) {
 
 // ============ LEADS / CRM ============
 
-export async function getLeads(filters?: { stage?: string; assignedTo?: number }) {
+export async function getLeads(filters?: { stage?: LeadStage; assignedTo?: number }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const conditions = [];
+  if (filters?.stage) conditions.push(eq(leads.stage, filters.stage));
+  if (filters?.assignedTo) conditions.push(eq(leads.assignedTo, filters.assignedTo));
+
+  const baseQuery = db.select({
     lead: leads,
     assignedUser: users,
   })
     .from(leads)
     .leftJoin(users, eq(leads.assignedTo, users.id));
 
-  const conditions = [];
-  if (filters?.stage) conditions.push(eq(leads.stage, filters.stage as any));
-  if (filters?.assignedTo) conditions.push(eq(leads.assignedTo, filters.assignedTo));
-
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(leads.createdAt));
   }
 
-  return await query.orderBy(desc(leads.createdAt));
+  return await baseQuery.orderBy(desc(leads.createdAt));
 }
 
 export async function createLead(data: InsertLead) {
@@ -1234,11 +1236,11 @@ export async function createLeadActivity(data: InsertLeadActivity) {
 
 // ============ PROPOSALS ============
 
-export async function getProposals(filters?: { status?: string }) {
+export async function getProposals(filters?: { status?: ProposalStatus }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const baseQuery = db.select({
     proposal: proposals,
     lead: leads,
     customer: customers,
@@ -1250,10 +1252,10 @@ export async function getProposals(filters?: { status?: string }) {
     .leftJoin(users, eq(proposals.createdBy, users.id));
 
   if (filters?.status) {
-    query = query.where(eq(proposals.status, filters.status as any)) as any;
+    return await baseQuery.where(eq(proposals.status, filters.status)).orderBy(desc(proposals.createdAt));
   }
 
-  return await query.orderBy(desc(proposals.createdAt));
+  return await baseQuery.orderBy(desc(proposals.createdAt));
 }
 
 export async function createProposal(data: InsertProposal) {
@@ -1283,11 +1285,15 @@ export async function createProposalItem(data: InsertProposalItem) {
 
 // ============ CONTRACTS ============
 
-export async function getContracts(filters?: { status?: string; customerId?: number }) {
+export async function getContracts(filters?: { status?: ContractStatus; customerId?: number }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(contracts.status, filters.status));
+  if (filters?.customerId) conditions.push(eq(contracts.customerId, filters.customerId));
+
+  const baseQuery = db.select({
     contract: contracts,
     customer: customers,
     creator: users,
@@ -1296,15 +1302,11 @@ export async function getContracts(filters?: { status?: string; customerId?: num
     .leftJoin(customers, eq(contracts.customerId, customers.id))
     .leftJoin(users, eq(contracts.createdBy, users.id));
 
-  const conditions = [];
-  if (filters?.status) conditions.push(eq(contracts.status, filters.status as any));
-  if (filters?.customerId) conditions.push(eq(contracts.customerId, filters.customerId));
-
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(contracts.createdAt));
   }
 
-  return await query.orderBy(desc(contracts.createdAt));
+  return await baseQuery.orderBy(desc(contracts.createdAt));
 }
 
 export async function createContract(data: InsertContract) {
@@ -1345,11 +1347,16 @@ export async function getContractItems(contractId: number) {
 
 // ============ TASKS ============
 
-export async function getTasks(filters?: { status?: string; projectId?: number; assignedTo?: number }) {
+export async function getTasks(filters?: { status?: TaskStatus; projectId?: number; assignedTo?: number }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(tasks.status, filters.status));
+  if (filters?.projectId) conditions.push(eq(tasks.projectId, filters.projectId));
+  if (filters?.assignedTo) conditions.push(eq(tasks.assignedTo, filters.assignedTo));
+
+  const baseQuery = db.select({
     task: tasks,
     project: projects,
     assignedUser: users,
@@ -1359,17 +1366,12 @@ export async function getTasks(filters?: { status?: string; projectId?: number; 
     .leftJoin(projects, eq(tasks.projectId, projects.id))
     .leftJoin(users, eq(tasks.assignedTo, users.id));
 
-  const conditions = [];
-  if (filters?.status) conditions.push(eq(tasks.status, filters.status as any));
-  if (filters?.projectId) conditions.push(eq(tasks.projectId, filters.projectId));
-  if (filters?.assignedTo) conditions.push(eq(tasks.assignedTo, filters.assignedTo));
-
+  // Ordenar por data de vencimento (mais próximas primeiro), depois por data de criação
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(tasks.dueDate, desc(tasks.createdAt));
   }
 
-  // Ordenar por data de vencimento (mais próximas primeiro), depois por data de criação
-  return await query.orderBy(tasks.dueDate, desc(tasks.createdAt));
+  return await baseQuery.orderBy(tasks.dueDate, desc(tasks.createdAt));
 }
 
 export async function createTask(data: InsertTask) {
@@ -1402,7 +1404,13 @@ export async function getTimeEntries(filters?: { userId?: number; projectId?: nu
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const conditions = [];
+  if (filters?.userId) conditions.push(eq(timeEntries.userId, filters.userId));
+  if (filters?.projectId) conditions.push(eq(timeEntries.projectId, filters.projectId));
+  if (filters?.startDate) conditions.push(gte(timeEntries.date, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(timeEntries.date, filters.endDate));
+
+  const baseQuery = db.select({
     timeEntry: timeEntries,
     task: tasks,
     project: projects,
@@ -1413,17 +1421,11 @@ export async function getTimeEntries(filters?: { userId?: number; projectId?: nu
     .leftJoin(projects, eq(timeEntries.projectId, projects.id))
     .leftJoin(users, eq(timeEntries.userId, users.id));
 
-  const conditions = [];
-  if (filters?.userId) conditions.push(eq(timeEntries.userId, filters.userId));
-  if (filters?.projectId) conditions.push(eq(timeEntries.projectId, filters.projectId));
-  if (filters?.startDate) conditions.push(gte(timeEntries.date, filters.startDate));
-  if (filters?.endDate) conditions.push(lte(timeEntries.date, filters.endDate));
-
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(timeEntries.date));
   }
 
-  return await query.orderBy(desc(timeEntries.date));
+  return await baseQuery.orderBy(desc(timeEntries.date));
 }
 
 export async function createTimeEntry(data: InsertTimeEntry) {
@@ -1436,11 +1438,16 @@ export async function createTimeEntry(data: InsertTimeEntry) {
 
 // ============ TICKETS / SUPPORT ============
 
-export async function getTickets(filters?: { status?: string; customerId?: number; assignedTo?: number }) {
+export async function getTickets(filters?: { status?: TicketStatus; customerId?: number; assignedTo?: number }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(tickets.status, filters.status));
+  if (filters?.customerId) conditions.push(eq(tickets.customerId, filters.customerId));
+  if (filters?.assignedTo) conditions.push(eq(tickets.assignedTo, filters.assignedTo));
+
+  const baseQuery = db.select({
     ticket: tickets,
     customer: customers,
     assignedUser: users,
@@ -1450,16 +1457,11 @@ export async function getTickets(filters?: { status?: string; customerId?: numbe
     .leftJoin(customers, eq(tickets.customerId, customers.id))
     .leftJoin(users, eq(tickets.assignedTo, users.id));
 
-  const conditions = [];
-  if (filters?.status) conditions.push(eq(tickets.status, filters.status as any));
-  if (filters?.customerId) conditions.push(eq(tickets.customerId, filters.customerId));
-  if (filters?.assignedTo) conditions.push(eq(tickets.assignedTo, filters.assignedTo));
-
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(tickets.createdAt));
   }
 
-  return await query.orderBy(desc(tickets.createdAt));
+  return await baseQuery.orderBy(desc(tickets.createdAt));
 }
 
 export async function createTicket(data: InsertTicket) {
@@ -1631,11 +1633,15 @@ export async function getTaskChecklistProgress(taskId: number) {
 
 // ============ RECURRING EXPENSES ============
 
-export async function getRecurringExpenses(filters?: { status?: string; category?: string }) {
+export async function getRecurringExpenses(filters?: { status?: RecurringExpenseStatus; category?: RecurringExpenseCategory }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(recurringExpenses.status, filters.status));
+  if (filters?.category) conditions.push(eq(recurringExpenses.category, filters.category));
+
+  const baseQuery = db.select({
     expense: recurringExpenses,
     supplier: suppliers,
     creator: users,
@@ -1644,15 +1650,11 @@ export async function getRecurringExpenses(filters?: { status?: string; category
     .leftJoin(suppliers, eq(recurringExpenses.supplierId, suppliers.id))
     .leftJoin(users, eq(recurringExpenses.createdBy, users.id));
 
-  const conditions = [];
-  if (filters?.status) conditions.push(eq(recurringExpenses.status, filters.status as any));
-  if (filters?.category) conditions.push(eq(recurringExpenses.category, filters.category as any));
-
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(recurringExpenses.createdAt));
   }
 
-  return await query.orderBy(desc(recurringExpenses.createdAt));
+  return await baseQuery.orderBy(desc(recurringExpenses.createdAt));
 }
 
 export async function createRecurringExpense(data: InsertRecurringExpense) {
@@ -1814,11 +1816,15 @@ export async function generateRecurringExpensesBills(userId: number, month?: num
 
 // ============ PRODUCT SUBSCRIPTIONS ============
 
-export async function getProductSubscriptions(filters?: { status?: string; customerId?: number }) {
+export async function getProductSubscriptions(filters?: { status?: SubscriptionStatus; customerId?: number }) {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select({
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(productSubscriptions.status, filters.status));
+  if (filters?.customerId) conditions.push(eq(productSubscriptions.customerId, filters.customerId));
+
+  const baseQuery = db.select({
     subscription: productSubscriptions,
     product: products,
     customer: customers,
@@ -1829,15 +1835,11 @@ export async function getProductSubscriptions(filters?: { status?: string; custo
     .leftJoin(customers, eq(productSubscriptions.customerId, customers.id))
     .leftJoin(users, eq(productSubscriptions.createdBy, users.id));
 
-  const conditions = [];
-  if (filters?.status) conditions.push(eq(productSubscriptions.status, filters.status as any));
-  if (filters?.customerId) conditions.push(eq(productSubscriptions.customerId, filters.customerId));
-
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
+    return await baseQuery.where(and(...conditions)).orderBy(desc(productSubscriptions.createdAt));
   }
 
-  return await query.orderBy(desc(productSubscriptions.createdAt));
+  return await baseQuery.orderBy(desc(productSubscriptions.createdAt));
 }
 
 export async function createProductSubscription(data: InsertProductSubscription) {
@@ -1965,9 +1967,36 @@ export async function updateTaxSettings(id: number, data: Partial<InsertTaxSetti
   return await db.update(taxSettings).set(data).where(eq(taxSettings.id, id));
 }
 
+// ============ COMPANY SETTINGS ============
+
+export async function getCompanySettings() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const settings = await db.select().from(companySettings).where(eq(companySettings.isActive, true)).limit(1);
+  return settings[0] || null;
+}
+
+export async function createCompanySettings(data: InsertCompanySetting) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.insert(companySettings).values(data);
+}
+
+export async function updateCompanySettings(id: number, data: Partial<InsertCompanySetting>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  console.log("updateCompanySettings - id:", id, "data keys:", Object.keys(data), "logo length:", data.logo?.length || 0);
+  const result = await db.update(companySettings).set(data).where(eq(companySettings.id, id));
+  console.log("updateCompanySettings - result:", result);
+  return result;
+}
+
 // ============ BUDGETS ============
 
-export async function getBudgets(filters?: { status?: string; customerId?: number }) {
+export async function getBudgets(filters?: { status?: BudgetStatus; customerId?: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -1982,13 +2011,13 @@ export async function getBudgets(filters?: { status?: string; customerId?: numbe
   if (filters?.status && filters?.customerId) {
     return await baseQuery
       .where(and(
-        eq(budgets.status, filters.status as any),
+        eq(budgets.status, filters.status),
         eq(budgets.customerId, filters.customerId)
       ))
       .orderBy(desc(budgets.createdAt));
   } else if (filters?.status) {
     return await baseQuery
-      .where(eq(budgets.status, filters.status as any))
+      .where(eq(budgets.status, filters.status))
       .orderBy(desc(budgets.createdAt));
   } else if (filters?.customerId) {
     return await baseQuery
@@ -2014,7 +2043,7 @@ export async function getBudgetById(id: number) {
   return result[0] || null;
 }
 
-export async function createBudget(budget: InsertBudget) {
+export async function createBudget(budget: Omit<InsertBudget, 'budgetNumber'>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   

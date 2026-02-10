@@ -1,4 +1,4 @@
-import { boolean, date, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, int, longtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -28,6 +28,7 @@ export const customers = mysqlTable("customers", {
   phone: varchar("phone", { length: 50 }),
   document: varchar("document", { length: 50 }), // CPF/CNPJ
   address: text("address"),
+  neighborhood: varchar("neighborhood", { length: 100 }),
   city: varchar("city", { length: 100 }),
   state: varchar("state", { length: 2 }),
   zipCode: varchar("zipCode", { length: 20 }),
@@ -543,6 +544,42 @@ export type TaxSetting = typeof taxSettings.$inferSelect;
 export type InsertTaxSetting = typeof taxSettings.$inferInsert;
 
 /**
+ * Company settings - dados da empresa para contratos e documentos
+ */
+export const companySettings = mysqlTable("company_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  companyName: varchar("companyName", { length: 255 }).notNull(),
+  tradeName: varchar("tradeName", { length: 255 }), // Nome fantasia
+  logo: longtext("logo"), // Logo em base64 ou URL
+  cnpj: varchar("cnpj", { length: 20 }).notNull(),
+  stateRegistration: varchar("stateRegistration", { length: 50 }), // Inscrição estadual
+  municipalRegistration: varchar("municipalRegistration", { length: 50 }), // Inscrição municipal
+  address: text("address"),
+  neighborhood: varchar("neighborhood", { length: 100 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 2 }),
+  zipCode: varchar("zipCode", { length: 20 }),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  // Dados do responsável
+  ownerName: varchar("ownerName", { length: 255 }),
+  ownerCpf: varchar("ownerCpf", { length: 20 }),
+  ownerRole: varchar("ownerRole", { length: 100 }), // Cargo (ex: Diretor, Sócio)
+  ownerNationality: varchar("ownerNationality", { length: 50 }).default("brasileiro"),
+  ownerMaritalStatus: varchar("ownerMaritalStatus", { length: 50 }),
+  ownerProfession: varchar("ownerProfession", { length: 100 }),
+  ownerAddress: text("ownerAddress"),
+  // Configurações
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CompanySetting = typeof companySettings.$inferSelect;
+export type InsertCompanySetting = typeof companySettings.$inferInsert;
+
+/**
  * Budgets table
  */
 export const budgets = mysqlTable("budgets", {
@@ -554,6 +591,7 @@ export const budgets = mysqlTable("budgets", {
   customerPhone: varchar("customerPhone", { length: 50 }),
   customerDocument: varchar("customerDocument", { length: 50 }), // CPF/CNPJ
   customerAddress: text("customerAddress"),
+  customerNeighborhood: varchar("customerNeighborhood", { length: 100 }),
   customerCity: varchar("customerCity", { length: 100 }),
   customerState: varchar("customerState", { length: 2 }),
   customerZipCode: varchar("customerZipCode", { length: 20 }),
@@ -648,3 +686,18 @@ export const budgetTemplates = mysqlTable("budget_templates", {
 
 export type BudgetTemplate = typeof budgetTemplates.$inferSelect;
 export type InsertBudgetTemplate = typeof budgetTemplates.$inferInsert;
+
+// ============ ENUM TYPES ============
+export type OrderStatus = "pending" | "approved" | "in_production" | "completed" | "cancelled";
+export type AccountPayableStatus = "pending" | "paid" | "overdue" | "cancelled";
+export type AccountReceivableStatus = "pending" | "received" | "overdue" | "cancelled";
+export type ProjectStatus = "project" | "development" | "design" | "review" | "launched" | "cancelled";
+export type LeadStage = "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
+export type ProposalStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
+export type ContractStatus = "active" | "suspended" | "cancelled" | "expired";
+export type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
+export type TicketStatus = "open" | "in_progress" | "waiting_customer" | "resolved" | "closed";
+export type RecurringExpenseStatus = "active" | "paused" | "cancelled";
+export type RecurringExpenseCategory = "electricity" | "water" | "phone" | "internet" | "rent" | "insurance" | "software" | "maintenance" | "other";
+export type SubscriptionStatus = "active" | "paused" | "cancelled";
+export type BudgetStatus = "draft" | "sent" | "approved" | "rejected" | "converted";

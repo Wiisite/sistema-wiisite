@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Plus, Search, Trash2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useViaCep } from "@/hooks/useViaCep";
 
 export default function Customers() {
   const [open, setOpen] = useState(false);
@@ -34,11 +35,33 @@ export default function Customers() {
     phone: "",
     document: "",
     address: "",
+    neighborhood: "",
     city: "",
     state: "",
     zipCode: "",
     notes: "",
   });
+
+  // Hook para busca de CEP
+  const { fetchAddress, isLoading: isLoadingCep } = useViaCep();
+
+  // Função para buscar endereço pelo CEP
+  const handleCepSearch = async () => {
+    const address = await fetchAddress(formData.zipCode);
+    if (address) {
+      setFormData(prev => ({
+        ...prev,
+        address: address.address,
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+        zipCode: address.zipCode,
+      }));
+      toast.success("Endereço encontrado!");
+    } else {
+      toast.error("CEP não encontrado");
+    }
+  };
 
   const { data: customers, isLoading, refetch } = trpc.customers.list.useQuery();
   const createMutation = trpc.customers.create.useMutation({
@@ -82,6 +105,7 @@ export default function Customers() {
       phone: "",
       document: "",
       address: "",
+      neighborhood: "",
       city: "",
       state: "",
       zipCode: "",
@@ -107,6 +131,7 @@ export default function Customers() {
       phone: customer.phone || "",
       document: customer.document || "",
       address: customer.address || "",
+      neighborhood: customer.neighborhood || "",
       city: customer.city || "",
       state: customer.state || "",
       zipCode: customer.zipCode || "",
@@ -194,21 +219,68 @@ export default function Customers() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">CEP</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="zipCode"
+                        value={formData.zipCode}
+                        onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleCepSearch();
+                          }
+                        }}
+                        placeholder="00000-000"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCepSearch}
+                        disabled={isLoadingCep || formData.zipCode.replace(/\D/g, "").length < 8}
+                        title="Buscar endereço pelo CEP"
+                      >
+                        {isLoadingCep ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Rua, número, complemento"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="neighborhood">Bairro</Label>
+                    <Input
+                      id="neighborhood"
+                      value={formData.neighborhood}
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                      placeholder="Bairro"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">Cidade</Label>
                     <Input
                       id="city"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="Cidade"
                     />
                   </div>
                   <div className="space-y-2">
@@ -218,14 +290,7 @@ export default function Customers() {
                       maxLength={2}
                       value={formData.state}
                       onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zipCode">CEP</Label>
-                    <Input
-                      id="zipCode"
-                      value={formData.zipCode}
-                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      placeholder="UF"
                     />
                   </div>
                 </div>

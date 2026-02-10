@@ -68,7 +68,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
-        if (data.email === "") data.email = null as any;
+        if (data.email === "") data.email = undefined;
         return await db.updateCustomer(id, data);
       }),
 
@@ -176,7 +176,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
-        if (data.email === "") data.email = null as any;
+        if (data.email === "") data.email = undefined;
         return await db.updateSupplier(id, data);
       }),
   }),
@@ -185,7 +185,7 @@ export const appRouter = router({
   orders: router({
     list: protectedProcedure
       .input(z.object({
-        status: z.string().optional(),
+        status: z.enum(["pending", "approved", "in_production", "completed", "cancelled"]).optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
       }).optional())
@@ -284,7 +284,7 @@ export const appRouter = router({
   accountsPayable: router({
     list: protectedProcedure
       .input(z.object({
-        status: z.string().optional(),
+        status: z.enum(["pending", "paid", "overdue", "cancelled"]).optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
       }).optional())
@@ -349,7 +349,7 @@ export const appRouter = router({
   accountsReceivable: router({
     list: protectedProcedure
       .input(z.object({
-        status: z.string().optional(),
+        status: z.enum(["pending", "received", "overdue", "cancelled"]).optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
       }).optional())
@@ -413,7 +413,7 @@ export const appRouter = router({
   // ============ PROJECTS ============
   projects: router({
     list: protectedProcedure
-      .input(z.object({ status: z.string().optional() }).optional())
+      .input(z.object({ status: z.enum(["project", "development", "design", "review", "launched", "cancelled"]).optional() }).optional())
       .query(async ({ input }) => {
         return await db.getProjects(input);
       }),
@@ -560,7 +560,7 @@ export const appRouter = router({
   leads: router({
     list: protectedProcedure
       .input(z.object({
-        stage: z.string().optional(),
+        stage: z.enum(["new", "contacted", "qualified", "proposal", "negotiation", "won", "lost"]).optional(),
         assignedTo: z.number().optional(),
       }).optional())
       .query(async ({ input }) => {
@@ -625,7 +625,7 @@ export const appRouter = router({
   // ============ PROPOSALS ============
   proposals: router({
     list: protectedProcedure
-      .input(z.object({ status: z.string().optional() }).optional())
+      .input(z.object({ status: z.enum(["draft", "sent", "accepted", "rejected", "expired"]).optional() }).optional())
       .query(async ({ input }) => {
         return await db.getProposals(input);
       }),
@@ -654,7 +654,7 @@ export const appRouter = router({
   contracts: router({
     list: protectedProcedure
       .input(z.object({
-        status: z.string().optional(),
+        status: z.enum(["active", "suspended", "cancelled", "expired"]).optional(),
         customerId: z.number().optional(),
       }).optional())
       .query(async ({ input }) => {
@@ -665,7 +665,7 @@ export const appRouter = router({
         customerId: z.number(),
         title: z.string(),
         description: z.string().optional(),
-        contractType: z.enum(["maintenance", "hosting", "support", "other"]),
+        contractType: z.enum(["maintenance", "hosting", "support", "software_license", "other"]),
         monthlyValue: z.string(),
         startDate: z.date(),
         endDate: z.date().optional(),
@@ -713,7 +713,7 @@ export const appRouter = router({
   tasks: router({
     list: protectedProcedure
       .input(z.object({
-        status: z.string().optional(),
+        status: z.enum(["todo", "in_progress", "review", "done", "cancelled"]).optional(),
         projectId: z.number().optional(),
         assignedTo: z.number().optional(),
       }).optional())
@@ -826,7 +826,7 @@ export const appRouter = router({
   tickets: router({
     list: protectedProcedure
       .input(z.object({
-        status: z.string().optional(),
+        status: z.enum(["open", "in_progress", "waiting_customer", "resolved", "closed"]).optional(),
         customerId: z.number().optional(),
         assignedTo: z.number().optional(),
       }).optional())
@@ -878,7 +878,7 @@ export const appRouter = router({
   // ============ RECURRING EXPENSES ============
   recurringExpenses: router({
     list: protectedProcedure
-      .input(z.object({ status: z.string().optional(), category: z.string().optional() }).optional())
+      .input(z.object({ status: z.enum(["active", "paused", "cancelled"]).optional(), category: z.enum(["electricity", "water", "phone", "internet", "rent", "insurance", "software", "maintenance", "other"]).optional() }).optional())
       .query(async ({ input }) => {
         return await db.getRecurringExpenses(input);
       }),
@@ -931,7 +931,7 @@ export const appRouter = router({
   
   productSubscriptions: router({
     list: protectedProcedure
-      .input(z.object({ status: z.string().optional(), customerId: z.number().optional() }).optional())
+      .input(z.object({ status: z.enum(["active", "paused", "cancelled"]).optional(), customerId: z.number().optional() }).optional())
       .query(async ({ input }) => {
         return await db.getProductSubscriptions(input);
       }),
@@ -1072,29 +1072,39 @@ export const appRouter = router({
         // Lucro líquido final
         const netProfit = profitBeforeTaxes - irpjAmount - csllAmount;
 
+        const { selectedProducts, ...inputWithoutProducts } = input;
+        
         const budgetData = {
-          ...input,
+          ...inputWithoutProducts,
+          laborCost: input.laborCost.toString(),
+          laborHours: input.laborHours.toString(),
+          laborRate: (input.laborRate || 0).toString(),
+          materialCost: input.materialCost.toString(),
+          thirdPartyCost: input.thirdPartyCost.toString(),
+          otherDirectCosts: input.otherDirectCosts.toString(),
+          indirectCostsTotal: input.indirectCostsTotal.toString(),
+          profitMargin: input.profitMargin.toString(),
           cbsRate: cbsRate.toString(),
           ibsRate: ibsRate.toString(),
           irpjRate: irpjRate.toString(),
           csllRate: csllRate.toString(),
-          totalDirectCosts,
-          totalCosts,
-          grossValue,
-          cbsAmount,
-          ibsAmount,
-          totalConsumptionTaxes,
-          netRevenue,
-          profitBeforeTaxes,
-          irpjAmount,
-          csllAmount,
-          netProfit,
-          finalPrice: grossValue,
+          totalDirectCosts: totalDirectCosts.toString(),
+          totalCosts: totalCosts.toString(),
+          grossValue: grossValue.toString(),
+          cbsAmount: cbsAmount.toString(),
+          ibsAmount: ibsAmount.toString(),
+          totalConsumptionTaxes: totalConsumptionTaxes.toString(),
+          netRevenue: netRevenue.toString(),
+          profitBeforeTaxes: profitBeforeTaxes.toString(),
+          irpjAmount: irpjAmount.toString(),
+          csllAmount: csllAmount.toString(),
+          netProfit: netProfit.toString(),
+          finalPrice: grossValue.toString(),
           taxRegime: taxConfig.taxRegime,
           createdBy: ctx.user.id,
         };
 
-        const result = await db.createBudget(budgetData as any);
+        const result = await db.createBudget(budgetData);
         
         // Salvar produtos selecionados como items do orçamento
         if (input.selectedProducts && input.selectedProducts.length > 0) {
@@ -1349,6 +1359,61 @@ export const appRouter = router({
 
   taxSettings: publicProcedure.query(async () => {
     return await db.getTaxSettings();
+  }),
+
+  companySettings: router({
+    get: publicProcedure.query(async () => {
+      return await db.getCompanySettings();
+    }),
+
+    upsert: protectedProcedure
+      .input(z.object({
+        id: z.number().optional(),
+        companyName: z.string().min(1),
+        tradeName: z.string().optional(),
+        logo: z.string().nullable().optional(),
+        cnpj: z.string().min(1),
+        stateRegistration: z.string().optional(),
+        municipalRegistration: z.string().optional(),
+        address: z.string().optional(),
+        neighborhood: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        phone: z.string().optional(),
+        email: z.string().optional(),
+        website: z.string().optional(),
+        ownerName: z.string().optional(),
+        ownerCpf: z.string().optional(),
+        ownerRole: z.string().optional(),
+        ownerNationality: z.string().optional(),
+        ownerMaritalStatus: z.string().optional(),
+        ownerProfession: z.string().optional(),
+        ownerAddress: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        console.log("companySettings.upsert input:", { 
+          ...input, 
+          logo: input.logo ? `[base64 length: ${input.logo.length}]` : 'empty/null/undefined' 
+        });
+        
+        // Garantir que logo vazio seja tratado como null
+        const dataToSave = {
+          ...input,
+          logo: input.logo && input.logo.length > 0 ? input.logo : null,
+        };
+        
+        if (input.id) {
+          const { id, ...data } = dataToSave;
+          console.log("Updating company settings id:", id, "logo length:", data.logo?.length || 0);
+          const result = await db.updateCompanySettings(id!, data);
+          console.log("Update result:", result);
+          return result;
+        } else {
+          console.log("Creating new company settings");
+          return await db.createCompanySettings(dataToSave);
+        }
+      }),
   }),
 });
 

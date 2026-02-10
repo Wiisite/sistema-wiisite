@@ -54,7 +54,7 @@ const sourceMap = {
 
 export default function Leads() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<string | undefined>();
+  const [selectedStage, setSelectedStage] = useState<"new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost" | undefined>();
   const [formData, setFormData] = useState({
     name: "",
     company: "",
@@ -114,14 +114,14 @@ export default function Leads() {
     createMutation.mutate({
       ...formData,
       stage: "new",
-      source: formData.source as any,
+      source: formData.source as "website" | "referral" | "cold_call" | "social_media" | "event" | "other",
     });
   };
 
   const handleStageChange = (leadId: number, newStage: string) => {
     updateMutation.mutate({
       id: leadId,
-      data: { stage: newStage as any },
+      data: { stage: newStage as "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost" },
     });
   };
 

@@ -236,7 +236,7 @@ export default function Support() {
                   </div>
                   <div>
                     <Label htmlFor="sla">SLA</Label>
-                    <Select value={formData.sla} onValueChange={(value) => setFormData({ ...formData, sla: value as any })}>
+                    <Select value={formData.sla} onValueChange={(value: "4h" | "24h" | "72h") => setFormData({ ...formData, sla: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

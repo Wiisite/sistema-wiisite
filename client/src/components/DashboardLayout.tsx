@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingCart, Package, DollarSign, TrendingUp, FileText, Building2, Briefcase, CalendarDays, FileSignature, Repeat, CheckSquare, Headphones, Calculator, FileStack, ExternalLink, Clock } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingCart, Package, DollarSign, TrendingUp, FileText, Building2, Briefcase, CalendarDays, FileSignature, Repeat, CheckSquare, Headphones, Calculator, FileStack, ExternalLink, Clock, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -43,6 +44,7 @@ const menuItems = [
   { icon: Package, label: "Produtos", path: "/products" },
   { icon: FileText, label: "Relatórios", path: "/reports" },
   { icon: Headphones, label: "Suporte", path: "/support" },
+  { icon: Settings, label: "Configurações", path: "/settings/company" },
   { icon: Clock, label: "Cartão de Ponto", path: "https://cartaodeponto.wiisitedigital.com.br/", external: true },
 ];
 
@@ -61,6 +63,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const { data: companySettings } = trpc.companySettings.get.useQuery();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -104,7 +107,11 @@ export default function DashboardLayout({
         } as CSSProperties
       }
     >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
+      <DashboardLayoutContent 
+        setSidebarWidth={setSidebarWidth}
+        companyLogo={companySettings?.logo || undefined}
+        companyName={companySettings?.tradeName || companySettings?.companyName || undefined}
+      >
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
@@ -119,7 +126,9 @@ type DashboardLayoutContentProps = {
 function DashboardLayoutContent({
   children,
   setSidebarWidth,
-}: DashboardLayoutContentProps) {
+  companyLogo,
+  companyName,
+}: DashboardLayoutContentProps & { companyLogo?: string; companyName?: string }) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
@@ -175,17 +184,21 @@ function DashboardLayoutContent({
         >
           <SidebarHeader className="h-16 justify-center">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
-              <button
-                onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-                aria-label="Toggle navigation"
-              >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
-              </button>
+              {companyLogo ? (
+                <img src={companyLogo} alt="Logo" className="h-8 w-8 object-contain shrink-0" />
+              ) : (
+                <button
+                  onClick={toggleSidebar}
+                  className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+                  aria-label="Toggle navigation"
+                >
+                  <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    {companyName || 'ERP System'}
                   </span>
                 </div>
               ) : null}

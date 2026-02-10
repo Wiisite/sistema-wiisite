@@ -174,8 +174,8 @@ export default function Orders() {
     }
   };
 
-  const handleStatusChange = (orderId: number, status: string) => {
-    updateStatusMutation.mutate({ id: orderId, status: status as any });
+  const handleStatusChange = (orderId: number, status: "pending" | "approved" | "in_production" | "completed" | "cancelled") => {
+    updateStatusMutation.mutate({ id: orderId, status });
   };
 
   const handleEdit = (row: any) => {
@@ -415,7 +415,7 @@ export default function Orders() {
                         <TableCell>
                           <Select
                             value={row.order.status}
-                            onValueChange={(value) => handleStatusChange(row.order.id, value)}
+                            onValueChange={(value: "pending" | "approved" | "in_production" | "completed" | "cancelled") => handleStatusChange(row.order.id, value)}
                           >
                             <SelectTrigger className="w-[180px]">
                               <SelectValue>

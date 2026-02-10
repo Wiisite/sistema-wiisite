@@ -2,9 +2,8 @@
 
 O EasyPanel é perfeito para este projeto pois ele gerencia o Docker automaticamente.
 
-## 1. Preparar o Código
-Você precisará ter este código em um repositório Git (GitHub, GitLab, etc) para o EasyPanel baixar.
-> Se você não tiver Git, pode usar a opção "Upload" se seu EasyPanel permitir, mas Git é o recomendado.
+## 1. Preparar o Código (GitHub - Recomendado)
+Execute os passos do arquivo **`GITHUB_SETUP.md`** para enviar seu código para o GitHub. É muito melhor que fazer upload manual.
 
 ## 2. Criar o Banco de Dados (MySQL)
 1. No seu Painel do EasyPanel, crie um novo **Service**.

@@ -1,0 +1,1 @@
+ALTER TABLE `company_settings` MODIFY COLUMN `logo` longtext;

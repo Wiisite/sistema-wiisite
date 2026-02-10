@@ -169,6 +169,41 @@
       "when": 1769464540031,
       "tag": "0023_remarkable_goliath",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1770677618263,
+      "tag": "0024_overconfident_captain_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1770677910182,
+      "tag": "0025_conscious_cobalt_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1770679249361,
+      "tag": "0026_loving_iron_patriot",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1770680502618,
+      "tag": "0027_freezing_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "5",
+      "when": 1770681647280,
+      "tag": "0028_cynical_frank_castle",
+      "breakpoints": true
     }
   ]
 }

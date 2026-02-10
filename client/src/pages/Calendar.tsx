@@ -50,6 +50,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [viewDateOpen, setViewDateOpen] = useState(false);
   const [viewDate, setViewDate] = useState<Date | null>(null);
+  const [filterProjectId, setFilterProjectId] = useState<string>("all");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -83,6 +84,12 @@ export default function CalendarPage() {
 
   const { data: customers } = trpc.customers.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
+  
+  // Buscar tarefas do projeto selecionado
+  const { data: projectTasks } = trpc.tasks.list.useQuery(
+    { projectId: filterProjectId !== "all" ? parseInt(filterProjectId) : undefined },
+    { enabled: filterProjectId !== "all" }
+  );
 
   const createMutation = trpc.calendar.create.useMutation({
     onSuccess: () => {
@@ -176,7 +183,7 @@ export default function CalendarPage() {
     const data = {
       title: formData.title,
       description: formData.description,
-      eventType: formData.eventType as any,
+      eventType: formData.eventType as "meeting" | "visit" | "call" | "other",
       startDate,
       endDate,
       customerId: formData.customerId && formData.customerId !== "" ? parseInt(formData.customerId) : undefined,
@@ -234,15 +241,51 @@ export default function CalendarPage() {
   }, [startDate, endDate]);
 
   const getEventsForDate = (date: Date) => {
-    if (!events) return [];
-    return events.filter((event: any) => {
-      const eventDate = new Date(event.startDate);
-      return (
-        eventDate.getDate() === date.getDate() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
-    });
+    const result: any[] = [];
+    
+    // Adicionar eventos do calendário
+    if (events) {
+      const filteredEvents = events.filter((event: any) => {
+        const eventDate = new Date(event.startDate);
+        const dateMatches = 
+          eventDate.getDate() === date.getDate() &&
+          eventDate.getMonth() === date.getMonth() &&
+          eventDate.getFullYear() === date.getFullYear();
+        
+        // Filtrar por projeto se selecionado
+        if (filterProjectId !== "all") {
+          const projectIdNum = parseInt(filterProjectId);
+          return dateMatches && event.projectId === projectIdNum;
+        }
+        
+        return dateMatches;
+      });
+      result.push(...filteredEvents);
+    }
+    
+    // Adicionar tarefas do projeto selecionado
+    if (filterProjectId !== "all" && projectTasks) {
+      const tasksForDate = projectTasks.filter((item: any) => {
+        if (!item.task.dueDate) return false;
+        const taskDate = new Date(item.task.dueDate);
+        return (
+          taskDate.getDate() === date.getDate() &&
+          taskDate.getMonth() === date.getMonth() &&
+          taskDate.getFullYear() === date.getFullYear()
+        );
+      }).map((item: any) => ({
+        id: `task-${item.task.id}`,
+        title: `[Tarefa] ${item.task.title}`,
+        startDate: item.task.dueDate,
+        eventType: 'task',
+        isTask: true,
+        taskStatus: item.task.status,
+        taskPriority: item.task.priority,
+      }));
+      result.push(...tasksForDate);
+    }
+    
+    return result;
   };
 
   const monthNames = [
@@ -270,6 +313,20 @@ export default function CalendarPage() {
               Gerencie visitas, reuniões e compromissos
             </p>
           </div>
+          <div className="flex items-center gap-4">
+            <Select value={filterProjectId} onValueChange={setFilterProjectId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por projeto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Projetos</SelectItem>
+                {projects?.map((item: any) => (
+                  <SelectItem key={item.project.id} value={item.project.id.toString()}>
+                    {item.project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           <Dialog open={open} onOpenChange={(isOpen) => {
             setOpen(isOpen);
             if (!isOpen) resetForm();
@@ -430,6 +487,7 @@ export default function CalendarPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Card className="p-6">

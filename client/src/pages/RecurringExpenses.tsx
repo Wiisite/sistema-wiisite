@@ -153,10 +153,10 @@ export default function RecurringExpenses() {
     e.preventDefault();
     const data = {
       name: formData.name,
-      category: formData.category as any,
+      category: formData.category as "electricity" | "water" | "phone" | "internet" | "rent" | "insurance" | "software" | "maintenance" | "other",
       supplierId: formData.supplierId ? parseInt(formData.supplierId) : undefined,
       amount: formData.amount,
-      frequency: formData.frequency as any,
+      frequency: formData.frequency as "monthly" | "quarterly" | "yearly",
       dayOfMonth: parseInt(formData.dayOfMonth),
       startDate: new Date(formData.startDate),
       endDate: formData.endDate ? new Date(formData.endDate) : undefined,

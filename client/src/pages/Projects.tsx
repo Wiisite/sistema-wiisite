@@ -340,7 +340,7 @@ export default function Projects() {
       name: formData.name,
       description: formData.description,
       customerId: formData.customerId && formData.customerId !== "" ? parseInt(formData.customerId) : undefined,
-      status: formData.status as any,
+      status: formData.status as "project" | "development" | "design" | "review" | "launched" | "cancelled",
       progress: parseInt(formData.progress),
       value: formData.value,
       deadline: new Date(formData.deadline),
@@ -390,24 +390,17 @@ export default function Projects() {
     const projectId = active.id as number;
     let newStatus: ProjectStatus | null = null;
 
-    console.log('=== DEBUG DRAG-AND-DROP ===');
-    console.log('Project ID:', projectId);
-    console.log('Over ID:', over.id);
-    console.log('Type of over.id:', typeof over.id);
-
     const validStatuses: ProjectStatus[] = ["project", "development", "design", "review", "launched", "cancelled"];
 
     // Se over.id é uma string e é um status válido, usar diretamente
     if (typeof over.id === 'string' && validStatuses.includes(over.id as ProjectStatus)) {
       newStatus = over.id as ProjectStatus;
-      console.log('Over.id é um status válido:', newStatus);
     }
     // Se over.id é um número (ID de projeto), buscar o status desse projeto
     else if (typeof over.id === 'number' || !isNaN(Number(over.id))) {
       const targetProject = (projects || []).find((row) => row.project.id === Number(over.id));
       if (targetProject) {
         newStatus = targetProject.project.status as ProjectStatus;
-        console.log('Over.id é um projeto, usando status desse projeto:', newStatus);
       }
     }
 
@@ -421,10 +414,8 @@ export default function Projects() {
     if (!currentProject) return;
 
     const currentStatus = currentProject.project.status as ProjectStatus;
-    console.log('Current Status:', currentStatus);
 
     if (currentStatus !== newStatus) {
-      console.log('Sending mutation with:', { id: projectId, status: newStatus });
       updateMutation.mutate({
         id: projectId,
         status: newStatus,

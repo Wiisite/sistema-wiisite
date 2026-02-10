@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, DollarSign, TrendingUp, AlertCircle, FileText, ShoppingCart, Edit2, Send, Check, X, Filter, MessageCircle, FolderKanban } from "lucide-react";
+import { Plus, DollarSign, TrendingUp, AlertCircle, FileText, ShoppingCart, Edit2, Send, Check, X, Filter, MessageCircle, FolderKanban, Search, Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useViaCep } from "@/hooks/useViaCep";
 
 export default function Budgets() {
   const [showForm, setShowForm] = useState(false);
@@ -24,13 +25,14 @@ export default function Budgets() {
     customerPhone: "",
     customerDocument: "",
     customerAddress: "",
+    customerNeighborhood: "",
     customerCity: "",
     customerState: "",
     customerZipCode: "",
     laborCost: 0,
     laborHours: 40,
-    laborRate: 80,
-    materialCost: 0,
+    laborRate: 50,
+    materialCost: 90,
     thirdPartyCost: 0,
     otherDirectCosts: 0,
     indirectCostsTotal: 0,
@@ -64,6 +66,27 @@ export default function Budgets() {
   const { data: taxSettings } = trpc.taxSettings.useQuery();
   const { data: templates } = trpc.budgetTemplates.list.useQuery();
   const [selectedProducts, setSelectedProducts] = useState<Array<{ productId: number; quantity: number; price: number }>>([]);
+  
+  // Hook para busca de CEP
+  const { fetchAddress, isLoading: isLoadingCep } = useViaCep();
+
+  // Função para buscar endereço pelo CEP
+  const handleCepSearch = async () => {
+    const address = await fetchAddress(formData.customerZipCode);
+    if (address) {
+      setFormData(prev => ({
+        ...prev,
+        customerAddress: address.address,
+        customerNeighborhood: address.neighborhood,
+        customerCity: address.city,
+        customerState: address.state,
+        customerZipCode: address.zipCode,
+      }));
+      toast.success("Endereço encontrado!");
+    } else {
+      toast.error("CEP não encontrado");
+    }
+  };
 
   // Pré-preencher impostos quando taxSettings carregar
   useEffect(() => {
@@ -240,6 +263,7 @@ export default function Budgets() {
       customerPhone: "",
       customerDocument: "",
       customerAddress: "",
+      customerNeighborhood: "",
       customerCity: "",
       customerState: "",
       customerZipCode: "",
@@ -276,10 +300,11 @@ export default function Budgets() {
     };
 
     if (editingId) {
+      const { selectedProducts: _, ...updateData } = dataToSubmit;
       updateMutation.mutate({
         id: editingId,
-        ...dataToSubmit,
-      } as any);
+        ...updateData,
+      });
     } else {
       createMutation.mutate(dataToSubmit);
     }
@@ -295,6 +320,7 @@ export default function Budgets() {
       customerPhone: budget.customerPhone || "",
       customerDocument: budget.customerDocument || "",
       customerAddress: budget.customerAddress || "",
+      customerNeighborhood: budget.customerNeighborhood || "",
       customerCity: budget.customerCity || "",
       customerState: budget.customerState || "",
       customerZipCode: budget.customerZipCode || "",
@@ -557,19 +583,42 @@ export default function Budgets() {
               </div>
               <div>
                 <Label>CEP</Label>
-                <Input
-                  value={formData.customerZipCode}
-                  onChange={(e) =>
-                    setFormData({ ...formData, customerZipCode: e.target.value })
-                  }
-                  placeholder="00000-000"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.customerZipCode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, customerZipCode: e.target.value })
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCepSearch();
+                      }
+                    }}
+                    placeholder="00000-000"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCepSearch}
+                    disabled={isLoadingCep || formData.customerZipCode.length < 8}
+                    title="Buscar endereço pelo CEP"
+                  >
+                    {isLoadingCep ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
 
             {/* Endereço Completo */}
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
                 <Label>Endereço</Label>
                 <Input
                   value={formData.customerAddress}
@@ -579,6 +628,18 @@ export default function Budgets() {
                   placeholder="Rua, número, complemento"
                 />
               </div>
+              <div>
+                <Label>Bairro</Label>
+                <Input
+                  value={formData.customerNeighborhood}
+                  onChange={(e) =>
+                    setFormData({ ...formData, customerNeighborhood: e.target.value })
+                  }
+                  placeholder="Bairro"
+                />
+              </div>
+            </div>
+            <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <Label>Cidade</Label>
                 <Input
@@ -639,12 +700,16 @@ export default function Budgets() {
                     }
                   }}
                 >
-                  <option value="">Selecione um template</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id.toString()}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
             )}

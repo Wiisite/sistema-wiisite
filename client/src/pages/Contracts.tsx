@@ -28,7 +28,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Calendar, DollarSign, Edit2, FileText, Plus, Printer, Trash2 } from "lucide-react";
+import { AlertCircle, Calendar, DollarSign, Edit2, FileText, Plus, Printer, Trash2, FileX, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -49,16 +56,33 @@ const contractTypeMap: Record<string, string> = {
 
 const generateSoftwareLicenseContract = (
   customer: any,
-  contractData: { monthlyValue: string; startDate: string }
+  contractData: { monthlyValue: string; startDate: string },
+  company: any
 ) => {
   const today = new Date();
   const formattedDate = today.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   
+  // Dados da empresa (contratada)
+  const companyName = company?.companyName || '[RAZÃO SOCIAL DA CONTRATADA]';
+  const companyCnpj = company?.cnpj || '[CNPJ DA CONTRATADA]';
+  const companyAddress = company?.address || '[ENDEREÇO DA CONTRATADA]';
+  const companyNeighborhood = company?.neighborhood || '';
+  const companyCity = company?.city || '[CIDADE]';
+  const companyState = company?.state || '[UF]';
+  const companyZipCode = company?.zipCode || '[CEP]';
+  const ownerName = company?.ownerName || '[NOME DO RESPONSÁVEL]';
+  const ownerCpf = company?.ownerCpf || '[CPF]';
+  const ownerRole = company?.ownerRole || 'Diretor';
+  const ownerNationality = company?.ownerNationality || 'brasileiro';
+  const ownerMaritalStatus = company?.ownerMaritalStatus || '[ESTADO CIVIL]';
+  const ownerProfession = company?.ownerProfession || '[PROFISSÃO]';
+  const ownerAddress = company?.ownerAddress || '[ENDEREÇO COMPLETO]';
+  
   return `CONTRATO DE LICENÇA DE USO DE SOFTWARE
 
-CONTRATANTE: ${customer?.name || '[RAZÃO SOCIAL DA EMPRESA]'}, com sede em ${customer?.address || '[ENDEREÇO]'}, bairro ${customer?.city || '[BAIRRO]'}, CEP ${customer?.zipCode || '[CEP]'}, no Estado ${customer?.state || '[ESTADO]'}, inscrita no CNPJ sob o nº ${customer?.document || '[CNPJ]'}, neste ato representada pelo seu diretor(a) [NOME DO RESPONSÁVEL], [NACIONALIDADE], [ESTADO CIVIL], [PROFISSÃO], CPF nº [CPF], residente e domiciliado em [ENDEREÇO COMPLETO].
+CONTRATANTE: ${customer?.name || '[RAZÃO SOCIAL DA EMPRESA]'}, com sede em ${customer?.address || '[ENDEREÇO]'}${customer?.neighborhood ? ', bairro ' + customer.neighborhood : ''}, CEP ${customer?.zipCode || '[CEP]'}, ${customer?.city || '[CIDADE]'} - ${customer?.state || '[ESTADO]'}, inscrita no CNPJ/CPF sob o nº ${customer?.document || '[CNPJ/CPF]'}.
 
-CONTRATADA: [RAZÃO SOCIAL DA CONTRATADA], com sede em [ENDEREÇO DA CONTRATADA], inscrita no CNPJ sob o nº: [CNPJ DA CONTRATADA], neste ato representada pelo seu diretor [NOME DO DIRETOR], [NACIONALIDADE], [ESTADO CIVIL], [PROFISSÃO], CPF nº: [CPF], residente e domiciliado em [ENDEREÇO COMPLETO].
+CONTRATADA: ${companyName}, com sede em ${companyAddress}${companyNeighborhood ? ', bairro ' + companyNeighborhood : ''}, CEP ${companyZipCode}, ${companyCity} - ${companyState}, inscrita no CNPJ sob o nº: ${companyCnpj}, neste ato representada pelo seu ${ownerRole} ${ownerName}, ${ownerNationality}, ${ownerMaritalStatus}, ${ownerProfession}, CPF nº: ${ownerCpf}, residente e domiciliado em ${ownerAddress}.
 
 As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Licença de Uso e Prestação de Serviços de Software, que se regerá pelas cláusulas seguintes e pelas condições descritas no presente.
 
@@ -158,7 +182,7 @@ Cláusula 32°: A CONTRATADA não disponibiliza de nenhuma forma os códigos fon
 
 Cláusula 33°: E por estarem assim justas e acertadas, as partes firmam o presente instrumento em 2 (duas) vias de igual teor e forma, assinadas e rubricadas, tudo na presença das duas testemunhas abaixo.
 
-[CIDADE], ${formattedDate}
+${companyCity}, ${formattedDate}
 
 
 __________________________________________________
@@ -168,7 +192,8 @@ ${customer?.name || '[RAZÃO SOCIAL DA EMPRESA CONTRATANTE]'}
 
 __________________________________________________
 CONTRATADA
-[RAZÃO SOCIAL DA EMPRESA CONTRATADA]
+${companyName}
+CNPJ: ${companyCnpj}
 
 
 __________________________________________
@@ -178,6 +203,284 @@ CPF:
 
 
 __________________________________________
+TESTEMUNHA 2
+Nome:
+CPF:
+`;
+};
+
+// Modelo de Rescisão Antecipada para Prestação de Serviço Parcelado
+const generateEarlyTerminationContract = (
+  customer: any,
+  contractData: { 
+    monthlyValue: string; 
+    startDate: string;
+    totalInstallments?: number;
+    paidInstallments?: number;
+    remainingValue?: string;
+  },
+  company: any
+) => {
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const totalInstallments = contractData.totalInstallments || 12;
+  const paidInstallments = contractData.paidInstallments || 0;
+  const remainingInstallments = totalInstallments - paidInstallments;
+  const monthlyValue = parseFloat(contractData.monthlyValue?.replace(',', '.') || '0');
+  const remainingValue = (remainingInstallments * monthlyValue).toFixed(2).replace('.', ',');
+  
+  // Dados da empresa
+  const companyName = company?.companyName || '[RAZÃO SOCIAL DA EMPRESA]';
+  const companyCnpj = company?.cnpj || '[CNPJ DA EMPRESA]';
+  const companyFullAddress = `${company?.address || '[ENDEREÇO]'}${company?.neighborhood ? ', ' + company.neighborhood : ''}, ${company?.city || '[CIDADE]'} - ${company?.state || '[UF]'}, CEP: ${company?.zipCode || '[CEP]'}`;
+  
+  return `TERMO DE RESCISÃO ANTECIPADA DE CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+CONTRATANTE: ${customer?.name || '[NOME/RAZÃO SOCIAL DO CONTRATANTE]'}
+CPF/CNPJ: ${customer?.document || '[CPF/CNPJ]'}
+Endereço: ${customer?.address || '[ENDEREÇO]'}${customer?.neighborhood ? ', ' + customer.neighborhood : ''}, ${customer?.city || '[CIDADE]'} - ${customer?.state || '[UF]'}, CEP: ${customer?.zipCode || '[CEP]'}
+E-mail: ${customer?.email || '[E-MAIL]'}
+Telefone: ${customer?.phone || '[TELEFONE]'}
+
+CONTRATADA: ${companyName}
+CNPJ: ${companyCnpj}
+Endereço: ${companyFullAddress}
+
+REFERÊNCIA: Contrato de Prestação de Serviços firmado em ${contractData.startDate ? new Date(contractData.startDate).toLocaleDateString('pt-BR') : '[DATA DO CONTRATO ORIGINAL]'}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+1. DO OBJETO
+
+1.1. O presente Termo tem por objeto formalizar a RESCISÃO ANTECIPADA do Contrato de Prestação de Serviços celebrado entre as partes acima qualificadas, conforme condições estabelecidas neste instrumento.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+2. DA SITUAÇÃO FINANCEIRA
+
+2.1. Valor mensal do contrato: R$ ${contractData.monthlyValue || '0,00'}
+2.2. Total de parcelas contratadas: ${totalInstallments} parcelas
+2.3. Parcelas já pagas: ${paidInstallments} parcelas
+2.4. Parcelas restantes: ${remainingInstallments} parcelas
+2.5. Valor total restante: R$ ${remainingValue}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+3. DAS CONDIÇÕES DE RESCISÃO
+
+3.1. A CONTRATANTE solicita a rescisão antecipada do contrato, estando ciente das seguintes condições:
+
+   a) MULTA POR RESCISÃO ANTECIPADA: Conforme cláusula contratual, a rescisão antecipada sem justo motivo implica no pagamento de multa equivalente a 20% (vinte por cento) do valor restante do contrato.
+
+   b) VALOR DA MULTA: R$ ${(parseFloat(remainingValue.replace(',', '.')) * 0.20).toFixed(2).replace('.', ',')}
+
+   c) VALOR TOTAL A PAGAR: R$ ${(parseFloat(remainingValue.replace(',', '.')) * 0.20).toFixed(2).replace('.', ',')} (multa rescisória)
+
+3.2. A CONTRATANTE declara estar ciente de que:
+   - Todos os serviços serão encerrados na data de assinatura deste termo;
+   - O acesso aos sistemas será suspenso após a quitação dos valores devidos;
+   - Não haverá devolução de valores já pagos referentes a serviços prestados.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+4. DA FORMA DE PAGAMENTO DA MULTA
+
+4.1. O valor da multa rescisória deverá ser pago da seguinte forma:
+
+[ ] À vista, no ato da assinatura deste termo
+[ ] Parcelado em _____ vezes de R$ _________
+[ ] Outra forma: _________________________________
+
+4.2. O não pagamento dos valores acordados implicará em:
+   - Inclusão do nome nos órgãos de proteção ao crédito;
+   - Cobrança judicial com acréscimo de custas processuais e honorários advocatícios de 20%.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+5. DA QUITAÇÃO
+
+5.1. Mediante o cumprimento integral das obrigações aqui estabelecidas, as partes darão mútua e recíproca quitação, nada mais tendo a reclamar uma da outra, seja a que título for, em relação ao contrato ora rescindido.
+
+5.2. A quitação final será formalizada mediante recibo específico após a confirmação do pagamento integral.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+6. DAS DISPOSIÇÕES FINAIS
+
+6.1. Este termo entra em vigor na data de sua assinatura.
+
+6.2. As partes elegem o foro da Comarca de [CIDADE]-[UF] para dirimir quaisquer controvérsias oriundas deste instrumento.
+
+6.3. E por estarem assim justas e acordadas, as partes assinam o presente termo em 2 (duas) vias de igual teor e forma.
+
+${customer?.city || '[CIDADE]'}, ${formattedDate}
+
+
+_______________________________________________
+CONTRATANTE
+${customer?.name || '[NOME DO CONTRATANTE]'}
+CPF/CNPJ: ${customer?.document || '[CPF/CNPJ]'}
+
+
+_______________________________________________
+CONTRATADA
+${companyName}
+CNPJ: ${companyCnpj}
+
+
+_______________________________________________
+TESTEMUNHA 1
+Nome:
+CPF:
+
+
+_______________________________________________
+TESTEMUNHA 2
+Nome:
+CPF:
+`;
+};
+
+// Modelo de Contrato de Prestação de Serviços Parcelado
+const generateServiceContract = (
+  customer: any,
+  contractData: { 
+    monthlyValue: string; 
+    startDate: string;
+    endDate?: string;
+    totalInstallments?: number;
+    serviceDescription?: string;
+  },
+  company: any
+) => {
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const totalInstallments = contractData.totalInstallments || 12;
+  const monthlyValue = parseFloat(contractData.monthlyValue?.replace(',', '.') || '0');
+  const totalValue = (totalInstallments * monthlyValue).toFixed(2).replace('.', ',');
+  
+  // Dados da empresa
+  const companyName = company?.companyName || '[RAZÃO SOCIAL DA EMPRESA]';
+  const companyCnpj = company?.cnpj || '[CNPJ DA EMPRESA]';
+  const companyFullAddress = `${company?.address || '[ENDEREÇO]'}${company?.neighborhood ? ', ' + company.neighborhood : ''}, ${company?.city || '[CIDADE]'} - ${company?.state || '[UF]'}, CEP: ${company?.zipCode || '[CEP]'}`;
+  const companyCity = company?.city || '[CIDADE]';
+  const companyState = company?.state || '[UF]';
+  
+  return `CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+
+CONTRATANTE: ${customer?.name || '[NOME/RAZÃO SOCIAL DO CONTRATANTE]'}
+CPF/CNPJ: ${customer?.document || '[CPF/CNPJ]'}
+Endereço: ${customer?.address || '[ENDEREÇO]'}${customer?.neighborhood ? ', ' + customer.neighborhood : ''}, ${customer?.city || '[CIDADE]'} - ${customer?.state || '[UF]'}, CEP: ${customer?.zipCode || '[CEP]'}
+E-mail: ${customer?.email || '[E-MAIL]'}
+Telefone: ${customer?.phone || '[TELEFONE]'}
+
+CONTRATADA: ${companyName}
+CNPJ: ${companyCnpj}
+Endereço: ${companyFullAddress}
+
+As partes acima qualificadas têm entre si justo e acordado o presente CONTRATO DE PRESTAÇÃO DE SERVIÇOS, que se regerá pelas cláusulas e condições a seguir:
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CLÁUSULA 1ª - DO OBJETO
+
+1.1. O presente contrato tem por objeto a prestação dos seguintes serviços pela CONTRATADA à CONTRATANTE:
+
+${contractData.serviceDescription || '[DESCRIÇÃO DETALHADA DOS SERVIÇOS A SEREM PRESTADOS]'}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CLÁUSULA 2ª - DO PRAZO
+
+2.1. O presente contrato terá vigência de ${totalInstallments} meses, iniciando-se em ${contractData.startDate ? new Date(contractData.startDate).toLocaleDateString('pt-BR') : '[DATA DE INÍCIO]'} e encerrando-se em ${contractData.endDate ? new Date(contractData.endDate).toLocaleDateString('pt-BR') : '[DATA DE TÉRMINO]'}.
+
+2.2. O contrato poderá ser renovado mediante acordo entre as partes, formalizado por escrito.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CLÁUSULA 3ª - DO VALOR E FORMA DE PAGAMENTO
+
+3.1. Pela prestação dos serviços objeto deste contrato, a CONTRATANTE pagará à CONTRATADA:
+
+   • Valor Total: R$ ${totalValue}
+   • Número de Parcelas: ${totalInstallments}
+   • Valor de Cada Parcela: R$ ${contractData.monthlyValue || '0,00'}
+   • Vencimento: Todo dia 10 de cada mês
+
+3.2. O pagamento deverá ser efetuado mediante:
+   [ ] Boleto bancário
+   [ ] Transferência bancária (PIX/TED)
+   [ ] Cartão de crédito
+   [ ] Outra forma: _________________
+
+3.3. Em caso de atraso no pagamento, incidirá:
+   • Multa de 2% (dois por cento) sobre o valor da parcela;
+   • Juros de mora de 1% (um por cento) ao mês;
+   • Correção monetária pelo IPCA.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CLÁUSULA 4ª - DAS OBRIGAÇÕES DA CONTRATADA
+
+4.1. Prestar os serviços com qualidade e dentro dos prazos acordados;
+4.2. Manter sigilo sobre as informações da CONTRATANTE;
+4.3. Comunicar imediatamente qualquer impedimento na execução dos serviços;
+4.4. Fornecer suporte técnico durante a vigência do contrato.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CLÁUSULA 5ª - DAS OBRIGAÇÕES DA CONTRATANTE
+
+5.1. Efetuar os pagamentos nas datas acordadas;
+5.2. Fornecer as informações necessárias para a execução dos serviços;
+5.3. Comunicar à CONTRATADA qualquer irregularidade observada;
+5.4. Não ceder ou transferir este contrato a terceiros sem autorização.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CLÁUSULA 6ª - DA RESCISÃO
+
+6.1. O presente contrato poderá ser rescindido:
+   a) Por mútuo acordo entre as partes;
+   b) Por inadimplemento de qualquer das cláusulas contratuais;
+   c) Por solicitação de qualquer das partes, mediante aviso prévio de 30 dias.
+
+6.2. Em caso de rescisão antecipada por iniciativa da CONTRATANTE, sem justo motivo, será devida multa de 20% (vinte por cento) sobre o valor restante do contrato.
+
+6.3. Em caso de rescisão por inadimplemento da CONTRATANTE, além da multa prevista, serão devidos todos os valores em aberto, acrescidos de juros e correção.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CLÁUSULA 7ª - DO FORO
+
+7.1. As partes elegem o foro da Comarca de [CIDADE]-[UF] para dirimir quaisquer dúvidas ou controvérsias oriundas deste contrato, renunciando a qualquer outro, por mais privilegiado que seja.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+E por estarem assim justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença das testemunhas abaixo.
+
+${companyCity}, ${formattedDate}
+
+
+_______________________________________________
+CONTRATANTE
+${customer?.name || '[NOME DO CONTRATANTE]'}
+CPF/CNPJ: ${customer?.document || '[CPF/CNPJ]'}
+
+
+_______________________________________________
+CONTRATADA
+${companyName}
+CNPJ: ${companyCnpj}
+
+
+_______________________________________________
+TESTEMUNHA 1
+Nome:
+CPF:
+
+
+_______________________________________________
 TESTEMUNHA 2
 Nome:
 CPF:
@@ -204,6 +507,7 @@ export default function Contracts() {
 
   const { data: contracts, refetch } = trpc.contracts.list.useQuery();
   const { data: customers } = trpc.customers.list.useQuery();
+  const { data: companySettings } = trpc.companySettings.get.useQuery();
 
   const createMutation = trpc.contracts.create.useMutation({
     onSuccess: () => {
@@ -290,27 +594,61 @@ export default function Contracts() {
     }
   };
 
-  const handlePrintPDF = (item: any) => {
+  const handlePrintContract = (item: any, contractType: 'license' | 'service' | 'termination') => {
     const contract = item.contract;
     const customer = item.customer;
     
-    const content = generateSoftwareLicenseContract(customer, {
-      monthlyValue: contract.monthlyValue,
-      startDate: contract.startDate,
-    });
+    let content = '';
+    let title = '';
+    
+    switch (contractType) {
+      case 'license':
+        content = generateSoftwareLicenseContract(customer, {
+          monthlyValue: contract.monthlyValue,
+          startDate: contract.startDate,
+        }, companySettings);
+        title = 'CONTRATO DE LICENÇA DE USO DE SOFTWARE';
+        break;
+      case 'service':
+        content = generateServiceContract(customer, {
+          monthlyValue: contract.monthlyValue,
+          startDate: contract.startDate,
+          endDate: contract.endDate,
+          totalInstallments: 12,
+          serviceDescription: contract.description,
+        }, companySettings);
+        title = 'CONTRATO DE PRESTAÇÃO DE SERVIÇOS';
+        break;
+      case 'termination':
+        content = generateEarlyTerminationContract(customer, {
+          monthlyValue: contract.monthlyValue,
+          startDate: contract.startDate,
+          totalInstallments: 12,
+          paidInstallments: 0,
+        }, companySettings);
+        title = 'TERMO DE RESCISÃO ANTECIPADA';
+        break;
+    }
     
     // Criar janela de impressão
     const printWindow = window.open('', '_blank');
     if (printWindow) {
+      const logoHtml = companySettings?.logo 
+        ? `<img src="${companySettings.logo}" alt="Logo" style="max-height: 60px; max-width: 200px; object-fit: contain;" />`
+        : '';
+      const companyName = companySettings?.tradeName || companySettings?.companyName || '';
+      
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Contrato - ${contract.title}</title>
+          <title>${title} - ${contract.title}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
             .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .header-logo { margin-bottom: 15px; }
             .header h1 { margin: 0; font-size: 24px; }
+            .header h2 { margin: 5px 0 15px 0; font-size: 16px; color: #444; font-weight: normal; }
             .header p { margin: 5px 0; color: #666; }
             .contract-content { white-space: pre-wrap; }
             @media print { body { padding: 20px; } }
@@ -318,7 +656,9 @@ export default function Contracts() {
         </head>
         <body>
           <div class="header">
-            <h1>CONTRATO DE LICENÇA DE USO DE SOFTWARE</h1>
+            <div class="header-logo">${logoHtml}</div>
+            ${companyName ? `<h2>${companyName}</h2>` : ''}
+            <h1>${title}</h1>
             <p>Contrato: ${contract.title}</p>
             <p>Cliente: ${customer?.name || '-'}</p>
             <p>Valor Mensal: R$ ${parseFloat(contract.monthlyValue || '0').toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
@@ -332,6 +672,42 @@ export default function Contracts() {
     }
   };
 
+  const handleViewContract = (item: any, contractType: 'license' | 'service' | 'termination') => {
+    const contract = item.contract;
+    const customer = item.customer;
+    
+    let content = '';
+    
+    switch (contractType) {
+      case 'license':
+        content = generateSoftwareLicenseContract(customer, {
+          monthlyValue: contract.monthlyValue,
+          startDate: contract.startDate,
+        }, companySettings);
+        break;
+      case 'service':
+        content = generateServiceContract(customer, {
+          monthlyValue: contract.monthlyValue,
+          startDate: contract.startDate,
+          endDate: contract.endDate,
+          totalInstallments: 12,
+          serviceDescription: contract.description,
+        }, companySettings);
+        break;
+      case 'termination':
+        content = generateEarlyTerminationContract(customer, {
+          monthlyValue: contract.monthlyValue,
+          startDate: contract.startDate,
+          totalInstallments: 12,
+          paidInstallments: 0,
+        }, companySettings);
+        break;
+    }
+    
+    setContractContent(content);
+    setViewContractOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -339,7 +715,7 @@ export default function Contracts() {
       customerId: parseInt(formData.customerId),
       title: formData.title,
       description: formData.description,
-      contractType: formData.contractType as any,
+      contractType: formData.contractType as "maintenance" | "hosting" | "support" | "software_license" | "other",
       monthlyValue: formData.monthlyValue,
       startDate: new Date(formData.startDate),
       endDate: formData.endDate ? new Date(formData.endDate) : undefined,
@@ -549,7 +925,7 @@ export default function Contracts() {
                         const content = generateSoftwareLicenseContract(customer, {
                           monthlyValue: formData.monthlyValue,
                           startDate: formData.startDate,
-                        });
+                        }, companySettings);
                         setContractContent(content);
                         setViewContractOpen(true);
                       }}
@@ -723,15 +1099,65 @@ export default function Contracts() {
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handlePrintPDF(item)}
-                          title="Imprimir PDF"
-                        >
-                          <Printer className="h-4 w-4" />
-                        </Button>
+                        
+                        {/* Dropdown para gerar contratos */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Gerar Contrato"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewContract(item, 'license')}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Contrato de Licença
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewContract(item, 'service')}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Contrato de Serviços
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleViewContract(item, 'termination')} className="text-red-600">
+                              <FileX className="h-4 w-4 mr-2" />
+                              Rescisão Antecipada
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Dropdown para imprimir */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Imprimir"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handlePrintContract(item, 'license')}>
+                              <Printer className="h-4 w-4 mr-2" />
+                              Imprimir Licença
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePrintContract(item, 'service')}>
+                              <Printer className="h-4 w-4 mr-2" />
+                              Imprimir Serviços
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handlePrintContract(item, 'termination')} className="text-red-600">
+                              <Printer className="h-4 w-4 mr-2" />
+                              Imprimir Rescisão
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <Button
                           variant="ghost"
                           size="icon"
