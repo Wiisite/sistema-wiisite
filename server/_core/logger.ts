@@ -10,7 +10,7 @@ interface LogEntry {
 }
 
 class Logger {
-    private isDevelopment = ENV.nodeEnv === 'development' || !ENV.nodeEnv;
+    private isDevelopment = !ENV.isProduction;
 
     private log(level: LogLevel, message: string, data?: unknown): void {
         const entry: LogEntry = {
