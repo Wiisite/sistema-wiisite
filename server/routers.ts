@@ -502,59 +502,59 @@ export const appRouter = router({
 
   // ============ CALENDAR ============
   calendar: router({
-      events: protectedProcedure
-        .input(z.object({
+    events: protectedProcedure
+      .input(z.object({
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return await getCalendarEvents(input);
+      }),
+    financialAlerts: protectedProcedure
+      .input(z.object({
+        year: z.number(),
+        month: z.number(),
+      }))
+      .query(async ({ input }) => {
+        return await getMonthlyFinancialAlerts(input.year, input.month);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        eventType: z.enum(["meeting", "visit", "call", "other"]),
+        startDate: z.date(),
+        endDate: z.date(),
+        customerId: z.number().optional(),
+        projectId: z.number().optional(),
+        location: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await createCalendarEvent({ ...input, createdBy: ctx.user.id });
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        data: z.object({
+          title: z.string().optional(),
+          description: z.string().optional(),
+          eventType: z.enum(["meeting", "visit", "call", "other"]).optional(),
           startDate: z.date().optional(),
           endDate: z.date().optional(),
-        }).optional())
-        .query(async ({ input }) => {
-          return await getCalendarEvents(input);
-        }),
-      financialAlerts: protectedProcedure
-        .input(z.object({
-          year: z.number(),
-          month: z.number(),
-        }))
-        .query(async ({ input }) => {
-          return await getMonthlyFinancialAlerts(input.year, input.month);
-        }),
-      create: protectedProcedure
-        .input(z.object({
-          title: z.string(),
-          description: z.string().optional(),
-          eventType: z.enum(["meeting", "visit", "call", "other"]),
-          startDate: z.date(),
-          endDate: z.date(),
           customerId: z.number().optional(),
           projectId: z.number().optional(),
           location: z.string().optional(),
-        }))
-        .mutation(async ({ input, ctx }) => {
-          return await createCalendarEvent({ ...input, createdBy: ctx.user.id });
         }),
-      update: protectedProcedure
-        .input(z.object({
-          id: z.number(),
-          data: z.object({
-            title: z.string().optional(),
-            description: z.string().optional(),
-            eventType: z.enum(["meeting", "visit", "call", "other"]).optional(),
-            startDate: z.date().optional(),
-            endDate: z.date().optional(),
-            customerId: z.number().optional(),
-            projectId: z.number().optional(),
-            location: z.string().optional(),
-          }),
-        }))
-        .mutation(async ({ input }) => {
-          return await updateCalendarEvent(input.id, input.data);
-        }),
-      delete: protectedProcedure
-        .input(z.object({ id: z.number() }))
-        .mutation(async ({ input }) => {
-          return await deleteCalendarEvent(input.id);
-        }),
-    }),
+      }))
+      .mutation(async ({ input }) => {
+        return await updateCalendarEvent(input.id, input.data);
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await deleteCalendarEvent(input.id);
+      }),
+  }),
 
   // ============ LEADS / CRM ============
   leads: router({
@@ -928,7 +928,7 @@ export const appRouter = router({
         return await db.generateRecurringExpensesBills(ctx.user.id);
       }),
   }),
-  
+
   productSubscriptions: router({
     list: protectedProcedure
       .input(z.object({ status: z.enum(["active", "paused", "cancelled"]).optional(), customerId: z.number().optional() }).optional())
@@ -1073,7 +1073,7 @@ export const appRouter = router({
         const netProfit = profitBeforeTaxes - irpjAmount - csllAmount;
 
         const { selectedProducts, ...inputWithoutProducts } = input;
-        
+
         const budgetData = {
           ...inputWithoutProducts,
           laborCost: input.laborCost.toString(),
@@ -1105,13 +1105,13 @@ export const appRouter = router({
         };
 
         const result = await db.createBudget(budgetData);
-        
+
         // Salvar produtos selecionados como items do orçamento
         if (input.selectedProducts && input.selectedProducts.length > 0) {
           const budgetId = Number(result[0].insertId);
           await db.saveBudgetItems(budgetId, input.selectedProducts);
         }
-        
+
         return result;
       }),
 
@@ -1146,26 +1146,26 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...rest } = input;
-        
+
         // Se estiver editando custos, recalcular tudo
-        if (rest.laborCost !== undefined || rest.materialCost !== undefined || 
-            rest.thirdPartyCost !== undefined || rest.otherDirectCosts !== undefined ||
-            rest.indirectCostsTotal !== undefined || rest.profitMargin !== undefined) {
-          
+        if (rest.laborCost !== undefined || rest.materialCost !== undefined ||
+          rest.thirdPartyCost !== undefined || rest.otherDirectCosts !== undefined ||
+          rest.indirectCostsTotal !== undefined || rest.profitMargin !== undefined) {
+
           const taxConfig = await db.getTaxSettings();
           if (!taxConfig) throw new TRPCError({ code: "NOT_FOUND", message: "Configurações fiscais não encontradas" });
-          
+
           // Buscar orçamento atual para pegar valores não alterados
           const current = await db.getBudgetById(id);
           if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
-          
+
           const laborCost = rest.laborCost !== undefined ? rest.laborCost : Number(current.budget.laborCost);
           const materialCost = rest.materialCost !== undefined ? rest.materialCost : Number(current.budget.materialCost);
           const thirdPartyCost = rest.thirdPartyCost !== undefined ? rest.thirdPartyCost : Number(current.budget.thirdPartyCost);
           const otherDirectCosts = rest.otherDirectCosts !== undefined ? rest.otherDirectCosts : Number(current.budget.otherDirectCosts);
           const indirectCostsTotal = rest.indirectCostsTotal !== undefined ? rest.indirectCostsTotal : Number(current.budget.indirectCostsTotal);
           const profitMargin = rest.profitMargin !== undefined ? rest.profitMargin : Number(current.budget.profitMargin);
-          
+
           // Calcular custos
           const totalDirectCosts = laborCost + materialCost + thirdPartyCost + otherDirectCosts;
           const totalCosts = totalDirectCosts + indirectCostsTotal;
@@ -1178,7 +1178,7 @@ export const appRouter = router({
           const irpjAmount = profitBeforeTaxes * (Number(taxConfig.irpjRate) / 100);
           const csllAmount = profitBeforeTaxes * (Number(taxConfig.csllRate) / 100);
           const netProfit = profitBeforeTaxes - irpjAmount - csllAmount;
-          
+
           const data: any = {
             ...rest,
             totalDirectCosts,
@@ -1194,10 +1194,10 @@ export const appRouter = router({
             netProfit,
             finalPrice: grossValue,
           };
-          
+
           return await db.updateBudget(id, data);
         }
-        
+
         // Converter campos numéricos para string se existirem
         const data: any = { ...rest };
         if (data.laborCost !== undefined) data.laborCost = data.laborCost.toString();
@@ -1207,7 +1207,7 @@ export const appRouter = router({
         if (data.otherDirectCosts !== undefined) data.otherDirectCosts = data.otherDirectCosts.toString();
         if (data.indirectCostsTotal !== undefined) data.indirectCostsTotal = data.indirectCostsTotal.toString();
         if (data.profitMargin !== undefined) data.profitMargin = data.profitMargin.toString();
-        
+
         return await db.updateBudget(id, data);
       }),
 
@@ -1228,14 +1228,14 @@ export const appRouter = router({
         const { generateBudgetPDF } = await import("./budgetPDF");
         const result = await db.getBudgetById(input.id);
         if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
-        
+
         // Buscar items do orçamento (produtos/serviços)
         const budgetItems = await db.getBudgetItems(input.id);
         const items = budgetItems.map(bi => ({
           productName: bi.product?.name || bi.item.description,
           description: bi.item.description,
         }));
-        
+
         const pdfBuffer = await generateBudgetPDF({ ...result, items });
         return {
           pdf: pdfBuffer.toString("base64"),
@@ -1262,17 +1262,17 @@ export const appRouter = router({
         if (!result) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Or\u00e7amento n\u00e3o encontrado" });
         }
-        
+
         // Gerar PDF
         const { generateBudgetPDF } = await import("./budgetPDF");
         const pdfBuffer = await generateBudgetPDF(result);
-        
+
         // Upload para S3
         const { storagePut } = await import("./storage");
         const filename = `orcamento-${result.budget.budgetNumber || input.id}.pdf`;
         const fileKey = `budgets/${ctx.user.id}/${Date.now()}-${filename}`;
         const { url } = await storagePut(fileKey, pdfBuffer, "application/pdf");
-        
+
         return {
           url,
           filename,
@@ -1392,25 +1392,18 @@ export const appRouter = router({
         ownerAddress: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        console.log("companySettings.upsert input:", { 
-          ...input, 
-          logo: input.logo ? `[base64 length: ${input.logo.length}]` : 'empty/null/undefined' 
-        });
-        
+
         // Garantir que logo vazio seja tratado como null
         const dataToSave = {
           ...input,
           logo: input.logo && input.logo.length > 0 ? input.logo : null,
         };
-        
+
         if (input.id) {
           const { id, ...data } = dataToSave;
-          console.log("Updating company settings id:", id, "logo length:", data.logo?.length || 0);
           const result = await db.updateCompanySettings(id!, data);
-          console.log("Update result:", result);
           return result;
         } else {
-          console.log("Creating new company settings");
           return await db.createCompanySettings(dataToSave);
         }
       }),

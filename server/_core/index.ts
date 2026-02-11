@@ -72,7 +72,7 @@ async function startServer() {
       
       // Retornar URL do arquivo
       const logoUrl = `/uploads/${filename}`;
-      console.log("Logo saved:", logoUrl);
+      logger.info("Logo saved:", logoUrl);
       
       res.json({ logoUrl });
     } catch (error) {
@@ -102,11 +102,11 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    logger.info(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
   server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+    logger.info(`Server running on http://localhost:${port}/`);
   });
 }
 
