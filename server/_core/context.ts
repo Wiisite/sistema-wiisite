@@ -14,6 +14,7 @@ const devUser: User = {
   openId: "dev-user-001",
   name: "Desenvolvedor",
   email: "dev@wiisite.com.br",
+  password: null,
   loginMethod: "development",
   role: "admin",
   createdAt: new Date(),
