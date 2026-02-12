@@ -102,11 +102,11 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    logger.info(`Port ${preferredPort} is busy, using port ${port} instead`);
+    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
   server.listen(port, () => {
-    logger.info(`Server running on http://localhost:${port}/`);
+    console.log(`Server running on http://localhost:${port}/`);
   });
 }
 

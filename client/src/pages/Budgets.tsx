@@ -38,6 +38,7 @@ export default function Budgets() {
     indirectCostsTotal: 0,
     profitMargin: 50,
     notes: "",
+    installments: 1, // 1 = à vista, 3, 6, 12
     // Impostos editáveis (pré-preenchidos das configurações)
     cbsRate: 0,
     ibsRate: 0,
@@ -333,6 +334,7 @@ export default function Budgets() {
       indirectCostsTotal: Number(budget.indirectCostsTotal),
       profitMargin: Number(budget.profitMargin),
       notes: budget.notes || "",
+      installments: budget.installments || 1,
       // Impostos do orçamento ou das configurações
       cbsRate: Number(budget.cbsRate) || Number(taxSettings?.cbsRate) || 0,
       ibsRate: Number(budget.ibsRate) || Number(taxSettings?.ibsRate) || 0,
@@ -1019,6 +1021,37 @@ export default function Budgets() {
                 </div>
               </div>
 
+              {/* Parcelas */}
+              <div className="mt-4 p-4 bg-white dark:bg-gray-900 border rounded-lg">
+                <Label className="text-sm font-semibold mb-3 block">Condição de Pagamento</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { value: 1, label: "À Vista" },
+                    { value: 3, label: "3x" },
+                    { value: 6, label: "6x" },
+                    { value: 12, label: "12x" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, installments: option.value })}
+                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                        formData.installments === option.value
+                          ? "border-purple-500 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 font-semibold"
+                          : "border-gray-200 dark:border-gray-700 hover:border-purple-300"
+                      }`}
+                    >
+                      <p className="text-sm font-medium">{option.label}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {option.value === 1
+                          ? formatCurrency(calculated.finalPrice)
+                          : `${option.value}x ${formatCurrency(calculated.finalPrice / option.value)}`}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Detalhamento */}
               <details className="mt-4">
                 <summary className="cursor-pointer font-semibold text-sm">
@@ -1141,6 +1174,11 @@ export default function Budgets() {
               <div className="text-right">
                 <p className="text-2xl font-bold text-purple-600">
                   {formatCurrency(Number(row.budget.finalPrice))}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {row.budget.installments && row.budget.installments > 1
+                    ? `${row.budget.installments}x ${formatCurrency(Number(row.budget.finalPrice) / row.budget.installments)}`
+                    : "À Vista"}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Lucro: {formatCurrency(Number(row.budget.netProfit))}

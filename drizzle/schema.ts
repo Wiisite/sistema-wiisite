@@ -631,6 +631,9 @@ export const budgets = mysqlTable("budgets", {
   netProfit: decimal("netProfit", { precision: 10, scale: 2 }).notNull(),
   finalPrice: decimal("finalPrice", { precision: 10, scale: 2 }).notNull(),
   
+  // Parcelas
+  installments: int("installments").default(1).notNull(), // 1 = à vista, 3, 6, 12
+  
   // Metadata
   taxRegime: mysqlEnum("taxRegime", ["new", "old", "transition"]).default("new").notNull(),
   status: mysqlEnum("status", ["draft", "sent", "approved", "rejected", "converted"]).default("draft").notNull(),

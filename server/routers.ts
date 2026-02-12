@@ -1030,6 +1030,7 @@ export const appRouter = router({
         irpjRate: z.number().optional(),
         csllRate: z.number().optional(),
         notes: z.string().optional(),
+        installments: z.number().optional(),
         selectedProducts: z.array(z.object({
           productId: z.number(),
           quantity: z.number(),
