@@ -1245,22 +1245,21 @@ export default function Budgets() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col gap-2 mt-2">
+                <div className="flex flex-row flex-wrap gap-2 mt-3">
                   {/* Botão Editar sempre visível */}
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full"
                     onClick={() => handleEdit(row.budget)}
                   >
-                    <Edit2 className="h-4 w-4 mr-2" />
+                    <Edit2 className="h-4 w-4 mr-1" />
                     Editar
                   </Button>
                   {row.budget.status === "draft" && (
                     <Button
                       size="sm"
                       variant="default"
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      className="bg-blue-600 hover:bg-blue-700"
                       onClick={() => {
                         if (confirm("Deseja marcar este orçamento como enviado?")) {
                           updateStatusMutation.mutate({ id: row.budget.id, status: "sent" });
@@ -1268,8 +1267,8 @@ export default function Budgets() {
                       }}
                       disabled={updateStatusMutation.isPending}
                     >
-                      <Send className="h-4 w-4 mr-2" />
-                      Marcar como Enviado
+                      <Send className="h-4 w-4 mr-1" />
+                      Enviado
                     </Button>
                   )}
                   {row.budget.status === "sent" && (
@@ -1277,29 +1276,28 @@ export default function Budgets() {
                       <Button
                         size="sm"
                         variant="default"
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="bg-green-600 hover:bg-green-700"
                         onClick={() => {
-                          if (confirm("Deseja aprovar este or\u00e7amento?")) {
+                          if (confirm("Deseja aprovar este orçamento?")) {
                             updateStatusMutation.mutate({ id: row.budget.id, status: "approved" });
                           }
                         }}
                         disabled={updateStatusMutation.isPending}
                       >
-                        <Check className="h-4 w-4 mr-2" />
+                        <Check className="h-4 w-4 mr-1" />
                         Aprovar
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="w-full"
                         onClick={() => {
-                          if (confirm("Deseja rejeitar este or\u00e7amento?")) {
+                          if (confirm("Deseja rejeitar este orçamento?")) {
                             updateStatusMutation.mutate({ id: row.budget.id, status: "rejected" });
                           }
                         }}
                         disabled={updateStatusMutation.isPending}
                       >
-                        <X className="h-4 w-4 mr-2" />
+                        <X className="h-4 w-4 mr-1" />
                         Rejeitar
                       </Button>
                     </>
@@ -1307,29 +1305,28 @@ export default function Budgets() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full"
                     onClick={() => exportPDFMutation.mutate({ id: row.budget.id })}
                     disabled={exportPDFMutation.isPending}
                   >
-                    <FileText className="h-4 w-4 mr-2" />
-                    {exportPDFMutation.isPending ? "Gerando..." : "Exportar PDF"}
+                    <FileText className="h-4 w-4 mr-1" />
+                    {exportPDFMutation.isPending ? "Gerando..." : "PDF"}
                   </Button>
                   <Button
                     size="sm"
                     variant="default"
-                    className="w-full bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700"
                     onClick={() => whatsappMutation.mutate({ id: row.budget.id })}
                     disabled={whatsappMutation.isPending}
                   >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    {whatsappMutation.isPending ? "Gerando..." : "Enviar via WhatsApp"}
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    {whatsappMutation.isPending ? "Gerando..." : "WhatsApp"}
                   </Button>
                   {row.budget.status === "approved" && (
                     <>
                       <Button
                         size="sm"
                         variant="default"
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="bg-amber-600 hover:bg-amber-700"
                         onClick={() => {
                           if (confirm("Deseja converter este orçamento em pedido?")) {
                             convertToOrderMutation.mutate({ id: row.budget.id });
@@ -1337,13 +1334,13 @@ export default function Budgets() {
                         }}
                         disabled={convertToOrderMutation.isPending}
                       >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        {convertToOrderMutation.isPending ? "Convertendo..." : "Converter em Pedido"}
+                        <ShoppingCart className="h-4 w-4 mr-1" />
+                        {convertToOrderMutation.isPending ? "Convertendo..." : "Pedido"}
                       </Button>
                       <Button
                         size="sm"
                         variant="default"
-                        className="w-full bg-indigo-600 hover:bg-indigo-700"
+                        className="bg-indigo-600 hover:bg-indigo-700"
                         onClick={() => {
                           if (confirm("Deseja criar um projeto a partir deste orçamento?")) {
                             createProjectMutation.mutate({ id: row.budget.id });
@@ -1351,8 +1348,8 @@ export default function Budgets() {
                         }}
                         disabled={createProjectMutation.isPending}
                       >
-                        <FolderKanban className="h-4 w-4 mr-2" />
-                        {createProjectMutation.isPending ? "Criando..." : "Criar Projeto"}
+                        <FolderKanban className="h-4 w-4 mr-1" />
+                        {createProjectMutation.isPending ? "Criando..." : "Projeto"}
                       </Button>
                     </>
                   )}
@@ -1360,7 +1357,6 @@ export default function Budgets() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      className="w-full"
                       onClick={() => {
                         const message = row.budget.status === "rejected" 
                           ? "Tem certeza que deseja excluir este orçamento rejeitado?"
@@ -1371,7 +1367,7 @@ export default function Budgets() {
                       }}
                       disabled={deleteMutation.isPending}
                     >
-                      <X className="h-4 w-4 mr-2" />
+                      <X className="h-4 w-4 mr-1" />
                       {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
                     </Button>
                   )}
