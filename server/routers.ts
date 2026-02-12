@@ -1144,6 +1144,7 @@ export const appRouter = router({
         csllRate: z.number().optional(),
         status: z.enum(["draft", "sent", "approved", "rejected"]).optional(),
         notes: z.string().optional(),
+        installments: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, ...rest } = input;

@@ -30,15 +30,16 @@ export default function Budgets() {
     customerState: "",
     customerZipCode: "",
     laborCost: 0,
-    laborHours: 40,
-    laborRate: 50,
-    materialCost: 90,
+    laborHours: 0,
+    laborRate: 0,
+    materialCost: 0,
     thirdPartyCost: 0,
     otherDirectCosts: 0,
     indirectCostsTotal: 0,
     profitMargin: 50,
     notes: "",
-    installments: 1, // 1 = à vista, 3, 6, 12
+    installments: 1,
+    status: "draft" as string,
     // Impostos editáveis (pré-preenchidos das configurações)
     cbsRate: 0,
     ibsRate: 0,
@@ -269,14 +270,16 @@ export default function Budgets() {
       customerState: "",
       customerZipCode: "",
       laborCost: 0,
-      laborHours: 40,
-      laborRate: 80,
+      laborHours: 0,
+      laborRate: 0,
       materialCost: 0,
       thirdPartyCost: 0,
       otherDirectCosts: 0,
       indirectCostsTotal: 0,
       profitMargin: 50,
       notes: "",
+      installments: 1,
+      status: "draft",
       // Resetar impostos para valores das configurações
       cbsRate: Number(taxSettings?.cbsRate) || 0,
       ibsRate: Number(taxSettings?.ibsRate) || 0,
@@ -335,6 +338,7 @@ export default function Budgets() {
       profitMargin: Number(budget.profitMargin),
       notes: budget.notes || "",
       installments: budget.installments || 1,
+      status: budget.status || "draft",
       // Impostos do orçamento ou das configurações
       cbsRate: Number(budget.cbsRate) || Number(taxSettings?.cbsRate) || 0,
       ibsRate: Number(budget.ibsRate) || Number(taxSettings?.ibsRate) || 0,
@@ -519,7 +523,7 @@ export default function Budgets() {
       {/* Formulário */}
       {showForm && (
         <Card className="p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Novo Orçamento</h2>
+          <h2 className="text-xl font-semibold mb-4">{editingId ? "Editar Orçamento" : "Novo Orçamento"}</h2>
 
           <div className="grid gap-4">
             {/* Informações Básicas */}
@@ -1128,6 +1132,34 @@ export default function Budgets() {
               </details>
             </div>
 
+            {/* Status (apenas na edição) */}
+            {editingId && (
+              <div className="border-t pt-4">
+                <Label className="font-semibold mb-3 block">Status do Orçamento</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { value: "draft", label: "Rascunho", color: "border-gray-400 bg-gray-50 text-gray-700" },
+                    { value: "sent", label: "Enviado", color: "border-blue-400 bg-blue-50 text-blue-700" },
+                    { value: "approved", label: "Aprovado", color: "border-green-400 bg-green-50 text-green-700" },
+                    { value: "rejected", label: "Rejeitado", color: "border-red-400 bg-red-50 text-red-700" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, status: option.value })}
+                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                        formData.status === option.value
+                          ? `${option.color} font-semibold`
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                      }`}
+                    >
+                      <p className="text-sm font-medium">{option.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <Label>Observações</Label>
               <Textarea
@@ -1143,7 +1175,7 @@ export default function Budgets() {
             <div className="flex gap-2">
               <Button
                 onClick={handleSubmit}
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || updateMutation.isPending}
               >
                 Salvar Orçamento
               </Button>
