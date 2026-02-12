@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { Loader2 } from "lucide-react";
 
 // Lazy load all page components for better initial load performance
+const Login = lazy(() => import("./pages/Login"));
 const Home = lazy(() => import("./pages/Home"));
 const Customers = lazy(() => import("./pages/Customers"));
 const Products = lazy(() => import("./pages/Products"));
@@ -43,6 +44,7 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
+        <Route path={"/login"} component={Login} />
         <Route path={"/"} component={Home} />
         <Route path={"/customers"} component={Customers} />
         <Route path={"/products"} component={Products} />

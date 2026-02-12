@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { registerAuthRoutes } from "./auth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { logger } from "./logger";
@@ -97,6 +98,9 @@ async function startServer() {
     }
   });
 
+  // Auth routes (local authentication)
+  registerAuthRoutes(app);
+  
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
