@@ -18,6 +18,9 @@ COPY . .
 # Build application
 RUN pnpm run build
 
+# Install drizzle-kit globally for migrations (before pruning)
+RUN npm install -g drizzle-kit
+
 # Prune dev dependencies after build
 RUN pnpm prune --prod
 
@@ -27,6 +30,9 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Install drizzle-kit globally for migrations
+RUN npm install -g drizzle-kit
 
 # Copy built artifacts and production node_modules from builder
 COPY --from=builder /app/dist ./dist
