@@ -26,6 +26,7 @@ interface BudgetPDFData {
     csllAmount: string;
     netProfit: string;
     effectiveMargin: string;
+    installments?: number;
     status: string;
     createdAt: Date;
   };
@@ -214,6 +215,41 @@ export async function generateBudgetPDF(data: BudgetPDFData & { items?: any[] })
         width: 515,
         align: "center",
       });
+
+    // Condição de Pagamento
+    doc.moveDown(1);
+    const installments = data.budget.installments || 1;
+    const finalPrice = parseFloat(data.budget.finalPrice) || 0;
+    const paymentBoxY = doc.y;
+    doc
+      .fillColor("#f0fdf4")
+      .rect(40, paymentBoxY, 515, installments > 1 ? 40 : 30)
+      .fill();
+
+    doc
+      .fillColor("#166534")
+      .fontSize(9)
+      .font("Helvetica-Bold")
+      .text("CONDIÇÃO DE PAGAMENTO", 50, paymentBoxY + 8);
+
+    if (installments === 1) {
+      doc
+        .fontSize(9)
+        .font("Helvetica")
+        .fillColor("#000000")
+        .text("À Vista", 220, paymentBoxY + 8);
+    } else {
+      const installmentValue = finalPrice / installments;
+      doc
+        .fontSize(9)
+        .font("Helvetica")
+        .fillColor("#000000")
+        .text(`${installments}x de ${formatCurrency(installmentValue)}`, 220, paymentBoxY + 8);
+      doc
+        .fontSize(8)
+        .fillColor("#64748b")
+        .text(`(Total: ${formatCurrency(finalPrice)})`, 220, paymentBoxY + 22);
+    }
 
     // Rodapé Compacto
     doc
