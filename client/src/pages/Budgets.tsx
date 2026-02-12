@@ -1246,32 +1246,31 @@ export default function Budgets() {
                   )}
                 </div>
                 <div className="flex flex-col gap-2 mt-2">
+                  {/* Botão Editar sempre visível */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleEdit(row.budget)}
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
                   {row.budget.status === "draft" && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => handleEdit(row.budget)}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        onClick={() => {
-                          if (confirm("Deseja marcar este or\u00e7amento como enviado?")) {
-                            updateStatusMutation.mutate({ id: row.budget.id, status: "sent" });
-                          }
-                        }}
-                        disabled={updateStatusMutation.isPending}
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Marcar como Enviado
-                      </Button>
-                    </>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        if (confirm("Deseja marcar este orçamento como enviado?")) {
+                          updateStatusMutation.mutate({ id: row.budget.id, status: "sent" });
+                        }
+                      }}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Marcar como Enviado
+                    </Button>
                   )}
                   {row.budget.status === "sent" && (
                     <>
@@ -1358,34 +1357,23 @@ export default function Budgets() {
                     </>
                   )}
                   {(row.budget.status === "rejected" || (row.order && row.order.status === "cancelled")) && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => handleEdit(row.budget)}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="w-full"
-                        onClick={() => {
-                          const message = row.budget.status === "rejected" 
-                            ? "Tem certeza que deseja excluir este or\u00e7amento rejeitado?"
-                            : "Tem certeza que deseja excluir este or\u00e7amento com pedido cancelado?";
-                          if (confirm(message)) {
-                            deleteMutation.mutate({ id: row.budget.id });
-                          }
-                        }}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
-                      </Button>
-                    </>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => {
+                        const message = row.budget.status === "rejected" 
+                          ? "Tem certeza que deseja excluir este orçamento rejeitado?"
+                          : "Tem certeza que deseja excluir este orçamento com pedido cancelado?";
+                        if (confirm(message)) {
+                          deleteMutation.mutate({ id: row.budget.id });
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+                    </Button>
                   )}
                 </div>
               </div>
