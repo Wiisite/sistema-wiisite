@@ -35,16 +35,16 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  
+
   // Criar diretório de uploads se não existir
   const uploadsDir = path.resolve(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
-  
+
   // Servir arquivos estáticos de uploads
   app.use("/uploads", express.static(uploadsDir));
-  
+
   // Rota de upload de logo
   app.post("/api/upload-logo", async (req, res) => {
     try {
@@ -52,35 +52,35 @@ async function startServer() {
       if (!logo || typeof logo !== "string") {
         return res.status(400).json({ error: "Logo é obrigatório" });
       }
-      
+
       // Extrair dados do base64
       const matches = logo.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
       if (!matches) {
         return res.status(400).json({ error: "Formato de imagem inválido" });
       }
-      
+
       const ext = matches[1] === "svg+xml" ? "svg" : matches[1];
       const base64Data = matches[2];
       const buffer = Buffer.from(base64Data, "base64");
-      
+
       // Gerar nome único para o arquivo
       const filename = `company-logo-${Date.now()}.${ext}`;
       const filepath = path.join(uploadsDir, filename);
-      
+
       // Salvar arquivo
       fs.writeFileSync(filepath, buffer);
-      
+
       // Retornar URL do arquivo
       const logoUrl = `/uploads/${filename}`;
-      logger.info("Logo saved:", logoUrl);
-      
+      logger.info("Logo saved", { logoUrl });
+
       res.json({ logoUrl });
     } catch (error) {
       console.error("Error uploading logo:", error);
       res.status(500).json({ error: "Erro ao fazer upload do logo" });
     }
   });
-  
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API

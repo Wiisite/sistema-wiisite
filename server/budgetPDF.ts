@@ -36,7 +36,7 @@ interface BudgetPDFData {
   } | null;
 }
 
-export async function generateBudgetPDF(data: any): Promise<Buffer> {
+export async function generateBudgetPDF(data: BudgetPDFData & { items?: any[] }): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 40 });
     const chunks: Buffer[] = [];
@@ -51,7 +51,7 @@ export async function generateBudgetPDF(data: any): Promise<Buffer> {
     const logoHeight = 40;
     const logoX = 40;
     const logoY = 40;
-    
+
     // Logo à esquerda (com tratamento de erro)
     try {
       const fs = require('fs');
@@ -63,7 +63,7 @@ export async function generateBudgetPDF(data: any): Promise<Buffer> {
     } catch (error: any) {
       console.error('Erro ao carregar logo:', error?.message || error);
     }
-    
+
     // Dados da empresa à direita
     const companyX = 350;
     doc
@@ -71,19 +71,19 @@ export async function generateBudgetPDF(data: any): Promise<Buffer> {
       .font("Helvetica-Bold")
       .fillColor("#000000")
       .text("WIISITE DIGITAL LTDA - ME", companyX, logoY, { align: "right" });
-    
+
     doc
       .fontSize(8)
       .font("Helvetica")
       .fillColor("#64748b")
       .text("CNPJ: 55.895.370/0001-26", companyX, logoY + 12, { align: "right" });
-    
+
     doc
       .text("Tel: (11) 99492-3018", companyX, logoY + 22, { align: "right" });
-    
+
     // Mover para baixo do logo
     doc.y = logoY + logoHeight + 10;
-    
+
     // Linha separadora
     doc
       .strokeColor("#2563eb")
@@ -167,7 +167,7 @@ export async function generateBudgetPDF(data: any): Promise<Buffer> {
     if (data.items && data.items.length > 0) {
       doc.fillColor("#1e40af").fontSize(9).font("Helvetica-Bold").text("SERVIÇOS INCLUSOS", 40);
       doc.moveDown(0.3);
-      
+
       doc.fontSize(8).font("Helvetica").fillColor("#000000");
       data.items.forEach((item: any) => {
         doc.text(`• ${item.productName || item.description || 'Serviço'}`, 50);

@@ -3,15 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm with specific version matching packageManager
+RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
 
-# Copy package files
+# Copy package files first for better caching
 COPY package.json pnpm-lock.yaml ./
-COPY patches ./patches
 
 # Install all dependencies (including dev for build)
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -19,7 +18,7 @@ COPY . .
 # Build application
 RUN pnpm run build
 
-# Prune dev dependencies
+# Prune dev dependencies after build
 RUN pnpm prune --prod
 
 # Production stage
@@ -36,14 +35,17 @@ COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Create uploads directory with proper permissions
+RUN mkdir -p uploads && chown -R node:node /app
+
+# Use non-root user for security
+USER node
 
 # Expose port
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
 # Start command
