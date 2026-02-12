@@ -164,19 +164,26 @@ export default function Budgets() {
 
   const whatsappMutation = trpc.budgets.generatePDFForWhatsApp.useMutation({
     onSuccess: (data) => {
-      const message = `Ol\u00e1 ${data.customerName}! Segue o or\u00e7amento ${data.budgetNumber} solicitado. Qualquer d\u00favida estou \u00e0 disposi\u00e7\u00e3o!\n\nPDF: ${data.url}`;
+      // Baixar o PDF automaticamente
+      const link = document.createElement("a");
+      link.href = `data:application/pdf;base64,${data.pdf}`;
+      link.download = data.filename;
+      link.click();
+
+      // Montar mensagem do WhatsApp
+      const message = `Ol\u00e1 ${data.customerName}! Segue o or\u00e7amento ${data.budgetNumber} solicitado. Qualquer d\u00favida estou \u00e0 disposi\u00e7\u00e3o!`;
       
       // Formatar n\u00famero do telefone (remover caracteres especiais)
       let whatsappUrl;
       if (data.customerPhone) {
-        const phoneNumber = data.customerPhone.replace(/\D/g, ''); // Remove tudo que n\u00e3o \u00e9 d\u00edgito
+        const phoneNumber = data.customerPhone.replace(/\D/g, '');
         whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
       } else {
         whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
       }
       
       window.open(whatsappUrl, "_blank");
-      toast.success("Abrindo WhatsApp...");
+      toast.success("PDF baixado! Anexe-o na conversa do WhatsApp.");
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao gerar PDF");

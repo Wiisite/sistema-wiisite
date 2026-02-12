@@ -1262,21 +1262,23 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const result = await db.getBudgetById(input.id);
         if (!result) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Or\u00e7amento n\u00e3o encontrado" });
+          throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
         }
 
-        // Gerar PDF
-        const { generateBudgetPDF } = await import("./budgetPDF");
-        const pdfBuffer = await generateBudgetPDF(result);
+        // Buscar items do orçamento
+        const budgetItems = await db.getBudgetItems(input.id);
+        const items = budgetItems.map(bi => ({
+          productName: bi.product?.name || bi.item.description,
+          description: bi.item.description,
+        }));
 
-        // Upload para S3
-        const { storagePut } = await import("./storage");
+        // Gerar PDF como base64
+        const { generateBudgetPDF } = await import("./budgetPDF");
+        const pdfBuffer = await generateBudgetPDF({ ...result, items });
         const filename = `orcamento-${result.budget.budgetNumber || input.id}.pdf`;
-        const fileKey = `budgets/${ctx.user.id}/${Date.now()}-${filename}`;
-        const { url } = await storagePut(fileKey, pdfBuffer, "application/pdf");
 
         return {
-          url,
+          pdf: pdfBuffer.toString("base64"),
           filename,
           customerName: result.budget.customerName || "Cliente",
           budgetNumber: result.budget.budgetNumber || `#${input.id}`,
