@@ -279,7 +279,7 @@ export default function Orders() {
                 Novo Pedido
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[98vw] max-w-[1600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingOrder ? "Editar Pedido" : "Novo Pedido"}</DialogTitle>
               </DialogHeader>
@@ -316,85 +316,87 @@ export default function Orders() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label>Itens do Pedido *</Label>
+                    <h3 className="font-semibold text-base">Itens do Pedido *</h3>
                     <Button type="button" variant="outline" size="sm" onClick={addItem}>
                       <Plus className="mr-2 h-4 w-4" />
                       Adicionar Item
                     </Button>
                   </div>
 
-                  {formData.items.map((item, index) => (
-                    <Card key={index}>
-                      <CardContent className="pt-4">
-                        <div className="grid grid-cols-5 gap-4">
-                          <div className="col-span-2 space-y-2">
-                            <Label>Produto</Label>
-                            <Select
-                              value={item.productId}
-                              onValueChange={(value) => updateItem(index, "productId", value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {products?.map((product) => (
-                                  <SelectItem key={product.id} value={product.id.toString()}>
-                                    {product.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Quantidade</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.quantity}
-                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Preço Unit.</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.unitPrice}
-                              onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Subtotal</Label>
-                            <div className="flex gap-2">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={item.subtotal}
-                                readOnly
-                                className="bg-muted"
-                              />
-                              {formData.items.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeItem(index)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-muted/50 text-sm font-semibold text-muted-foreground border-b">
+                      <div className="col-span-5">Produto</div>
+                      <div className="col-span-2 text-center">Quantidade</div>
+                      <div className="col-span-2 text-right">Preço Unit.</div>
+                      <div className="col-span-2 text-right">Subtotal</div>
+                      <div className="col-span-1"></div>
+                    </div>
 
-                  <div className="flex justify-end">
-                    <div className="text-lg font-semibold">
-                      Total: {formatPrice(calculateTotal())}
+                    {formData.items.map((item, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-3 px-4 py-3 border-b last:border-b-0 items-center">
+                        <div className="col-span-5">
+                          <Select
+                            value={item.productId}
+                            onValueChange={(value) => updateItem(index, "productId", value)}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Selecione um produto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {products?.map((product) => (
+                                <SelectItem key={product.id} value={product.id.toString()}>
+                                  {product.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            type="number"
+                            step="1"
+                            min="1"
+                            className="h-10 text-center"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-10 text-right"
+                            value={item.unitPrice}
+                            onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-2 text-right font-semibold text-sm pr-2">
+                          {formatPrice(item.subtotal || "0")}
+                        </div>
+                        <div className="col-span-1 text-center">
+                          {formData.items.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => removeItem(index)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-muted/50 border-t font-semibold">
+                      <div className="col-span-9 text-right">Total:</div>
+                      <div className="col-span-2 text-right text-lg">
+                        {formatPrice(calculateTotal())}
+                      </div>
+                      <div className="col-span-1"></div>
                     </div>
                   </div>
                 </div>
