@@ -732,6 +732,69 @@ export async function getDashboardStats(startDate?: Date, endDate?: Date) {
   };
 }
 
+export async function getMonthlySummary(year: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    // Contas a receber por mês (pela data de vencimento)
+    const receivables = await db.execute(sql`
+      SELECT MONTH(dueDate) as month,
+        COALESCE(SUM(CASE WHEN status IN ('pending', 'overdue') THEN amount ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN status = 'received' THEN amount ELSE 0 END), 0) as received
+      FROM accountsReceivable
+      WHERE YEAR(dueDate) = ${year}
+      GROUP BY MONTH(dueDate)
+    `);
+
+    // Contas a pagar por mês (pela data de vencimento)
+    const payables = await db.execute(sql`
+      SELECT MONTH(dueDate) as month,
+        COALESCE(SUM(CASE WHEN status IN ('pending', 'overdue') THEN amount ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) as paid
+      FROM accountsPayable
+      WHERE YEAR(dueDate) = ${year}
+      GROUP BY MONTH(dueDate)
+    `);
+
+    interface MonthlyData { month: number; pending: string; received?: string; paid?: string }
+    const recData = (receivables[0] as unknown) as MonthlyData[];
+    const payData = (payables[0] as unknown) as MonthlyData[];
+
+    const summary = [];
+    for (let month = 1; month <= 12; month++) {
+      const rec = recData.find(r => r.month === month);
+      const pay = payData.find(p => p.month === month);
+
+      const receivablePending = parseFloat(rec?.pending || "0");
+      const receivableReceived = parseFloat(rec?.received || "0");
+      const payablePending = parseFloat(pay?.pending || "0");
+      const payablePaid = parseFloat(pay?.paid || "0");
+
+      summary.push({
+        month,
+        receivablePending,
+        receivableReceived,
+        receivableTotal: receivablePending + receivableReceived,
+        payablePending,
+        payablePaid,
+        payableTotal: payablePending + payablePaid,
+        balance: (receivablePending + receivableReceived) - (payablePending + payablePaid),
+      });
+    }
+
+    return summary;
+  } catch (error) {
+    console.error("Error in getMonthlySummary:", error);
+    return Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      receivablePending: 0, receivableReceived: 0, receivableTotal: 0,
+      payablePending: 0, payablePaid: 0, payableTotal: 0,
+      balance: 0,
+    }));
+  }
+}
+
 // ============ PROJECT HELPERS ============
 
 export async function getProjects(filters?: { status?: ProjectStatus }) {

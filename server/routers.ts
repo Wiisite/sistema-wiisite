@@ -986,6 +986,12 @@ export const appRouter = router({
       .query(async () => {
         return await db.getRecurringExpensesDueToday();
       }),
+
+    monthlySummary: protectedProcedure
+      .input(z.object({ year: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getMonthlySummary(input.year);
+      }),
   }),
 
   budgets: router({
