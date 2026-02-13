@@ -267,12 +267,19 @@ export default function Orders() {
             if (!isOpen) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => {
+                if (!editingOrder) {
+                  const year = new Date().getFullYear();
+                  const count = orders?.length || 0;
+                  const nextNumber = `PED-${year}-${String(count + 1).padStart(3, '0')}`;
+                  setFormData(prev => ({ ...prev, orderNumber: nextNumber }));
+                }
+              }}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Pedido
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingOrder ? "Editar Pedido" : "Novo Pedido"}</DialogTitle>
               </DialogHeader>
@@ -285,6 +292,8 @@ export default function Orders() {
                       value={formData.orderNumber}
                       onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
                       required
+                      readOnly
+                      className="bg-muted"
                     />
                   </div>
                   <div className="space-y-2">
