@@ -477,56 +477,34 @@ export default function Budgets() {
       {/* Formulário */}
       {showForm && (
         <Card className="p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">{editingId ? "Editar Orçamento" : "Novo Orçamento"}</h2>
-            <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          <h2 className="text-xl font-semibold mb-4">{editingId ? "Editar Orçamento" : "Novo Orçamento"}</h2>
 
           <div className="grid gap-4">
-            {/* Número do Pedido e Cliente */}
+            {/* Informações Básicas */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label>Número do Pedido *</Label>
+                <Label>Título *</Label>
                 <Input
                   value={formData.title}
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
-                  placeholder="Ex: ORC-2026-001"
+                  placeholder="Nome do orçamento"
                 />
               </div>
               <div>
-                <Label>Cliente *</Label>
-                <Select
-                  value={formData.customerId?.toString() || ""}
-                  onValueChange={(value) => {
-                    if (value) {
-                      const customer = customers?.find((c: any) => c.id === parseInt(value));
-                      if (customer) {
-                        setFormData({
-                          ...formData,
-                          customerId: customer.id,
-                          customerName: customer.name,
-                          customerEmail: customer.email || "",
-                          customerPhone: customer.phone || "",
-                        });
-                      }
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers?.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Nome da Empresa</Label>
+                <Input
+                  value={formData.customerName}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      customerName: e.target.value,
+                      customerId: undefined,
+                    })
+                  }
+                  placeholder="Digite o nome da empresa"
+                />
               </div>
             </div>
 
@@ -696,132 +674,63 @@ export default function Budgets() {
               </div>
             )}
 
-            {/* Itens do Pedido */}
+            {/* Seleção de Produtos/Serviços */}
             <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Itens do Pedido *</h3>
-                <Select
-                  value=""
-                  onValueChange={(value) => {
-                    if (value) {
-                      const product = products?.find(p => p.id === parseInt(value));
-                      if (product) {
-                        const exists = selectedProducts.find(sp => sp.productId === product.id);
-                        if (!exists) {
-                          setSelectedProducts([...selectedProducts, {
-                            productId: product.id,
-                            quantity: 1,
-                            price: Number(product.price)
-                          }]);
+              <h3 className="font-semibold mb-3">Produtos/Serviços</h3>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Select
+                    value=""
+                    onValueChange={(value) => {
+                      if (value) {
+                        const product = products?.find(p => p.id === parseInt(value));
+                        if (product) {
+                          const exists = selectedProducts.find(sp => sp.productId === product.id);
+                          if (!exists) {
+                            setSelectedProducts([...selectedProducts, {
+                              productId: product.id,
+                              quantity: 1,
+                              price: Number(product.price)
+                            }]);
+                          }
                         }
                       }
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="+ Adicionar Item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products?.map((product) => (
-                      <SelectItem key={product.id} value={product.id.toString()}>
-                        {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="border rounded-lg overflow-hidden">
-                <div className="grid grid-cols-12 gap-2 p-3 bg-gray-50 dark:bg-gray-800 text-sm font-semibold text-muted-foreground">
-                  <div className="col-span-4">Produto</div>
-                  <div className="col-span-2 text-center">Quantidade</div>
-                  <div className="col-span-2 text-right">Preço Unit.</div>
-                  <div className="col-span-3 text-right">Subtotal</div>
-                  <div className="col-span-1"></div>
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Adicionar produto/serviço..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products?.map((product) => (
+                        <SelectItem key={product.id} value={product.id.toString()}>
+                          {product.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {selectedProducts.length === 0 && (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Nenhum item adicionado
-                  </div>
-                )}
-                {selectedProducts.map((sp, index) => {
-                  const product = products?.find(p => p.id === sp.productId);
-                  return (
-                    <div key={sp.productId} className="grid grid-cols-12 gap-2 p-3 border-t items-center">
-                      <div className="col-span-4">
-                        <Select
-                          value={sp.productId.toString()}
-                          onValueChange={(value) => {
-                            const newProduct = products?.find(p => p.id === parseInt(value));
-                            if (newProduct) {
-                              const updated = [...selectedProducts];
-                              updated[index] = { ...updated[index], productId: newProduct.id, price: Number(newProduct.price) };
-                              setSelectedProducts(updated);
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products?.map((p) => (
-                              <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          min="1"
-                          className="h-9 text-center"
-                          value={sp.quantity}
-                          onChange={(e) => {
-                            const updated = [...selectedProducts];
-                            updated[index] = { ...updated[index], quantity: parseInt(e.target.value) || 1 };
-                            setSelectedProducts(updated);
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          className="h-9 text-right"
-                          value={sp.price}
-                          onChange={(e) => {
-                            const updated = [...selectedProducts];
-                            updated[index] = { ...updated[index], price: parseFloat(e.target.value) || 0 };
-                            setSelectedProducts(updated);
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-3 text-right font-semibold text-sm">
-                        {formatCurrency(sp.quantity * sp.price)}
-                      </div>
-                      <div className="col-span-1 text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            setSelectedProducts(selectedProducts.filter((_, i) => i !== index));
-                          }}
-                        >
-                          <X className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                
                 {selectedProducts.length > 0 && (
-                  <div className="grid grid-cols-12 gap-2 p-3 border-t bg-gray-50 dark:bg-gray-800 font-semibold">
-                    <div className="col-span-8 text-right">Total dos Itens:</div>
-                    <div className="col-span-3 text-right">
-                      {formatCurrency(selectedProducts.reduce((sum, sp) => sum + sp.quantity * sp.price, 0))}
-                    </div>
-                    <div className="col-span-1"></div>
+                  <div className="border rounded-lg p-3 space-y-2">
+                    {selectedProducts.map((sp, index) => {
+                      const product = products?.find(p => p.id === sp.productId);
+                      return (
+                        <div key={sp.productId} className="flex items-center gap-3 bg-gray-50 p-2 rounded">
+                          <span className="flex-1 text-sm">{product?.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newProducts = selectedProducts.filter((_, i) => i !== index);
+                              setSelectedProducts(newProducts);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
