@@ -27,8 +27,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Edit, FileText, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Edit, FileText, Plus, Trash2, DollarSign } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 const statusMap = {
@@ -55,6 +55,16 @@ export default function Orders() {
     orderNumber: "",
     items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
     notes: "",
+    // Custos
+    laborHours: 0,
+    laborRate: 0,
+    materialCost: 0,
+    thirdPartyCost: 0,
+    otherDirectCosts: 0,
+    indirectCostsTotal: 0,
+    profitMargin: 50,
+    simplesRate: 10,
+    installments: 1,
   });
 
   const { data: orders, isLoading, refetch } = trpc.orders.list.useQuery();
@@ -111,8 +121,32 @@ export default function Orders() {
       orderNumber: "",
       items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
       notes: "",
+      laborHours: 0,
+      laborRate: 0,
+      materialCost: 0,
+      thirdPartyCost: 0,
+      otherDirectCosts: 0,
+      indirectCostsTotal: 0,
+      profitMargin: 50,
+      simplesRate: 10,
+      installments: 1,
     });
     setEditingOrder(null);
+  };
+
+  // Cálculos automáticos
+  const calculated = useMemo(() => {
+    const calculatedLaborCost = formData.laborHours * formData.laborRate;
+    const totalDirectCosts = calculatedLaborCost + formData.materialCost + formData.thirdPartyCost + formData.otherDirectCosts;
+    const totalCosts = totalDirectCosts + formData.indirectCostsTotal;
+    const grossValue = formData.profitMargin >= 100 ? totalCosts : totalCosts / (1 - formData.profitMargin / 100);
+    const simplesAmount = grossValue * (formData.simplesRate / 100);
+    const netProfit = grossValue - totalCosts - simplesAmount;
+    return { totalDirectCosts, totalCosts, grossValue, simplesAmount, netProfit, finalPrice: grossValue };
+  }, [formData.laborHours, formData.laborRate, formData.materialCost, formData.thirdPartyCost, formData.otherDirectCosts, formData.indirectCostsTotal, formData.profitMargin, formData.simplesRate]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
   const addItem = () => {
@@ -356,6 +390,131 @@ export default function Orders() {
                   </div>
                 </div>
 
+                {/* Custos Diretos */}
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3">Custos Diretos</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <Label>Horas de Trabalho</Label>
+                      <Input type="number" step="0.01" value={formData.laborHours} onChange={(e) => setFormData({ ...formData, laborHours: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Valor por Hora (R$)</Label>
+                      <Input type="number" step="0.01" value={formData.laborRate} onChange={(e) => setFormData({ ...formData, laborRate: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Mão de Obra Total (R$)</Label>
+                      <Input type="number" value={(formData.laborHours * formData.laborRate).toFixed(2)} disabled className="bg-muted" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Materiais (R$)</Label>
+                      <Input type="number" value={formData.materialCost} onChange={(e) => setFormData({ ...formData, materialCost: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Terceiros (R$)</Label>
+                      <Input type="number" value={formData.thirdPartyCost} onChange={(e) => setFormData({ ...formData, thirdPartyCost: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Outros Custos Diretos (R$)</Label>
+                      <Input type="number" value={formData.otherDirectCosts} onChange={(e) => setFormData({ ...formData, otherDirectCosts: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Custos Indiretos */}
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3">Custos Indiretos (Rateados)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label>Total de Custos Indiretos (R$)</Label>
+                      <Input type="number" value={formData.indirectCostsTotal} onChange={(e) => setFormData({ ...formData, indirectCostsTotal: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Margem de Lucro (%)</Label>
+                      <Input type="number" step="0.1" value={formData.profitMargin} onChange={(e) => setFormData({ ...formData, profitMargin: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Imposto Simples Nacional */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold">Imposto - Simples Nacional (Anexo III)</h3>
+                    <span className="text-xs text-muted-foreground">Alíquota padrão: 10%</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label>Alíquota Simples Nacional (%)</Label>
+                      <Input type="number" step="0.01" value={formData.simplesRate} onChange={(e) => setFormData({ ...formData, simplesRate: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div className="flex items-end">
+                      <p className="text-sm text-muted-foreground pb-2">
+                        Imposto estimado: <span className="font-semibold text-orange-600">{formatCurrency(calculated.simplesAmount)}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Demonstrativo Financeiro */}
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3">Demonstrativo Financeiro</h3>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <Card className="p-4 bg-gray-50">
+                      <p className="text-muted-foreground mb-1">Custos Totais</p>
+                      <p className="text-2xl font-bold">{formatCurrency(calculated.totalCosts)}</p>
+                    </Card>
+                    <Card className="p-4 bg-orange-50">
+                      <p className="text-muted-foreground mb-1">Simples Nacional ({formData.simplesRate}%)</p>
+                      <p className="text-2xl font-bold text-orange-600">{formatCurrency(calculated.simplesAmount)}</p>
+                    </Card>
+                    <Card className="p-4 bg-green-50">
+                      <p className="text-muted-foreground mb-1">Lucro Líquido</p>
+                      <p className="text-2xl font-bold text-green-600">{formatCurrency(calculated.netProfit)}</p>
+                    </Card>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Preço Final de Venda</p>
+                        <p className="text-3xl font-bold text-purple-600">{formatCurrency(calculated.finalPrice)}</p>
+                      </div>
+                      <DollarSign className="h-12 w-12 text-purple-400" />
+                    </div>
+                  </div>
+
+                  {/* Parcelas */}
+                  <div className="mt-4 p-4 bg-white border rounded-lg">
+                    <Label className="text-sm font-semibold mb-3 block">Condição de Pagamento</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { value: 1, label: "À Vista" },
+                        { value: 3, label: "3x" },
+                        { value: 6, label: "6x" },
+                        { value: 12, label: "12x" },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, installments: option.value })}
+                          className={`p-3 rounded-lg border-2 text-center transition-all ${
+                            formData.installments === option.value
+                              ? "border-purple-500 bg-purple-50 text-purple-700 font-semibold"
+                              : "border-gray-200 hover:border-purple-300"
+                          }`}
+                        >
+                          <p className="text-sm font-medium">{option.label}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {option.value === 1
+                              ? formatCurrency(calculated.finalPrice)
+                              : `${option.value}x ${formatCurrency(calculated.finalPrice / option.value)}`}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="notes">Observações</Label>
                   <Textarea
@@ -371,7 +530,7 @@ export default function Orders() {
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending}>
-                    Criar Pedido
+                    {editingOrder ? "Atualizar Pedido" : "Criar Pedido"}
                   </Button>
                 </div>
               </form>
