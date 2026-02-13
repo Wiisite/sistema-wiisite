@@ -186,17 +186,7 @@ export async function generateBudgetPDF(data: BudgetPDFData & { items?: any[] })
       }).format(numValue);
     };
 
-    // Impostos
-    const startY = doc.y;
-    doc.fillColor("#1e40af").fontSize(9).font("Helvetica-Bold").text("IMPOSTOS INCLUSOS", 40, startY);
-    doc.moveDown(0.5);
-
-    doc.fontSize(8).font("Helvetica").fillColor("#000000");
-    doc.text(`CBS (${data.budget.cbsRate}%): ${formatCurrency(data.budget.cbsAmount)}`, 40);
-    doc.text(`IBS (${data.budget.ibsRate}%): ${formatCurrency(data.budget.ibsAmount)}`, 40);
-    doc.text(`IRPJ: ${formatCurrency(data.budget.irpjAmount)}`, 40);
-    doc.text(`CSLL: ${formatCurrency(data.budget.csllAmount)}`, 40);
-    doc.font("Helvetica-Bold").text(`Total Impostos: ${formatCurrency(data.budget.totalConsumptionTaxes)}`, 40);
+    // Regime tributário
     doc.moveDown(0.5);
 
     // Valor Total em Destaque

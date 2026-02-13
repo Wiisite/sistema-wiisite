@@ -40,24 +40,15 @@ export default function Budgets() {
     notes: "",
     installments: 1,
     status: "draft" as string,
-    // Impostos editáveis (pré-preenchidos das configurações)
-    cbsRate: 0,
-    ibsRate: 0,
-    irpjRate: 0,
-    csllRate: 0,
+    // Alíquota Simples Nacional
+    simplesRate: 10,
   });
 
   const [calculated, setCalculated] = useState({
     totalDirectCosts: 0,
     totalCosts: 0,
     grossValue: 0,
-    cbsAmount: 0,
-    ibsAmount: 0,
-    totalConsumptionTaxes: 0,
-    netRevenue: 0,
-    profitBeforeTaxes: 0,
-    irpjAmount: 0,
-    csllAmount: 0,
+    simplesAmount: 0,
     netProfit: 0,
     finalPrice: 0,
   });
@@ -90,18 +81,6 @@ export default function Budgets() {
     }
   };
 
-  // Pré-preencher impostos quando taxSettings carregar
-  useEffect(() => {
-    if (taxSettings && formData.cbsRate === 0 && formData.ibsRate === 0) {
-      setFormData(prev => ({
-        ...prev,
-        cbsRate: Number(taxSettings.cbsRate) || 0,
-        ibsRate: Number(taxSettings.ibsRate) || 0,
-        irpjRate: Number(taxSettings.irpjRate) || 0,
-        csllRate: Number(taxSettings.csllRate) || 0,
-      }));
-    }
-  }, [taxSettings]);
 
   const exportPDFMutation = trpc.budgets.exportPDF.useMutation({
     onSuccess: (data) => {
@@ -234,29 +213,15 @@ export default function Budgets() {
     const totalCosts = totalDirectCosts + formData.indirectCostsTotal;
     const grossValue = formData.profitMargin >= 100 ? totalCosts : totalCosts / (1 - formData.profitMargin / 100);
 
-    // Usar impostos do formulário (editáveis)
-    const cbsAmount = grossValue * (formData.cbsRate / 100);
-    const ibsAmount = grossValue * (formData.ibsRate / 100);
-    const totalConsumptionTaxes = cbsAmount + ibsAmount;
-
-    const netRevenue = grossValue - totalConsumptionTaxes;
-    const profitBeforeTaxes = netRevenue - totalCosts;
-
-    const irpjAmount = profitBeforeTaxes * (formData.irpjRate / 100);
-    const csllAmount = profitBeforeTaxes * (formData.csllRate / 100);
-    const netProfit = profitBeforeTaxes - irpjAmount - csllAmount;
+    // Alíquota Simples Nacional
+    const simplesAmount = grossValue * (formData.simplesRate / 100);
+    const netProfit = grossValue - totalCosts - simplesAmount;
 
     setCalculated({
       totalDirectCosts,
       totalCosts,
       grossValue,
-      cbsAmount,
-      ibsAmount,
-      totalConsumptionTaxes,
-      netRevenue,
-      profitBeforeTaxes,
-      irpjAmount,
-      csllAmount,
+      simplesAmount,
       netProfit,
       finalPrice: grossValue,
     });
@@ -287,11 +252,7 @@ export default function Budgets() {
       notes: "",
       installments: 1,
       status: "draft",
-      // Resetar impostos para valores das configurações
-      cbsRate: Number(taxSettings?.cbsRate) || 0,
-      ibsRate: Number(taxSettings?.ibsRate) || 0,
-      irpjRate: Number(taxSettings?.irpjRate) || 0,
-      csllRate: Number(taxSettings?.csllRate) || 0,
+      simplesRate: 10,
     });
     setShowForm(false);
     setEditingId(null);
@@ -303,10 +264,15 @@ export default function Budgets() {
       return;
     }
 
-    // Calcular laborCost antes de enviar
+    // Calcular laborCost e mapear simplesRate para cbsRate (reusa coluna do banco)
+    const { simplesRate, ...restFormData } = formData;
     const dataToSubmit = {
-      ...formData,
+      ...restFormData,
       laborCost: formData.laborHours * formData.laborRate,
+      cbsRate: simplesRate,
+      ibsRate: 0,
+      irpjRate: 0,
+      csllRate: 0,
       selectedProducts: selectedProducts,
     };
 
@@ -346,11 +312,7 @@ export default function Budgets() {
       notes: budget.notes || "",
       installments: budget.installments || 1,
       status: budget.status || "draft",
-      // Impostos do orçamento ou das configurações
-      cbsRate: Number(budget.cbsRate) || Number(taxSettings?.cbsRate) || 0,
-      ibsRate: Number(budget.ibsRate) || Number(taxSettings?.ibsRate) || 0,
-      irpjRate: Number(budget.irpjRate) || Number(taxSettings?.irpjRate) || 0,
-      csllRate: Number(budget.csllRate) || Number(taxSettings?.csllRate) || 0,
+      simplesRate: Number(budget.cbsRate) || 10,
     });
     setEditingId(budget.id);
     setShowForm(true);
@@ -385,7 +347,7 @@ export default function Budgets() {
         <div>
           <h1 className="text-3xl font-bold">Orçamentos</h1>
           <p className="text-muted-foreground">
-            Cálculo automático com CBS/IBS
+            Simples Nacional - Anexo III
           </p>
         </div>
         <div className="flex gap-2">
@@ -916,80 +878,36 @@ export default function Budgets() {
               </div>
             </div>
 
-            {/* Alíquotas de Impostos (Editáveis) */}
+            {/* Alíquota Simples Nacional */}
             <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Alíquotas de Impostos</h3>
+                <h3 className="font-semibold">Imposto - Simples Nacional (Anexo III)</h3>
                 <span className="text-xs text-muted-foreground">
-                  Pré-preenchido das configurações fiscais - edite se necessário
+                  Alíquota padrão: 10%
                 </span>
               </div>
-              <div className="grid md:grid-cols-4 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label>CBS (%)</Label>
+                  <Label>Alíquota Simples Nacional (%)</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    value={formData.cbsRate}
+                    value={formData.simplesRate}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        cbsRate: parseFloat(e.target.value) || 0,
+                        simplesRate: parseFloat(e.target.value) || 0,
                       })
                     }
-                    placeholder="Ex: 8.8"
+                    placeholder="Ex: 10"
                   />
                 </div>
-                <div>
-                  <Label>IBS (%)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.ibsRate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        ibsRate: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    placeholder="Ex: 17.7"
-                  />
-                </div>
-                <div>
-                  <Label>IRPJ (%)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.irpjRate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        irpjRate: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    placeholder="Ex: 15"
-                  />
-                </div>
-                <div>
-                  <Label>CSLL (%)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.csllRate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        csllRate: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    placeholder="Ex: 9"
-                  />
+                <div className="flex items-end">
+                  <p className="text-sm text-muted-foreground pb-2">
+                    Imposto estimado: <span className="font-semibold text-orange-600">{formatCurrency(calculated.simplesAmount)}</span>
+                  </p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Total impostos sobre consumo: {(formData.cbsRate + formData.ibsRate).toFixed(2)}% | 
-                Total impostos sobre lucro: {(formData.irpjRate + formData.csllRate).toFixed(2)}%
-              </p>
             </div>
 
             {/* Demonstrativo */}
@@ -1002,12 +920,12 @@ export default function Budgets() {
                     {formatCurrency(calculated.totalCosts)}
                   </p>
                 </Card>
-                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20">
+                <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
                   <p className="text-muted-foreground mb-1">
-                    Impostos (CBS+IBS)
+                    Simples Nacional ({formData.simplesRate}%)
                   </p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(calculated.totalConsumptionTaxes)}
+                  <p className="text-2xl font-bold text-orange-600">
+                    {formatCurrency(calculated.simplesAmount)}
                   </p>
                 </Card>
                 <Card className="p-4 bg-green-50 dark:bg-green-950/20">
@@ -1088,45 +1006,15 @@ export default function Budgets() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Valor Bruto (com margem):</span>
+                    <span>Valor Bruto (com margem {formData.profitMargin}%):</span>
                     <span className="font-semibold">
                       {formatCurrency(calculated.grossValue)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-blue-600">
-                    <span>CBS ({formData.cbsRate}%):</span>
-                    <span className="font-semibold">
-                      {formatCurrency(calculated.cbsAmount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-blue-600">
-                    <span>IBS ({formData.ibsRate}%):</span>
-                    <span className="font-semibold">
-                      {formatCurrency(calculated.ibsAmount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span>Receita Líquida:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(calculated.netRevenue)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Lucro antes IRPJ/CSLL:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(calculated.profitBeforeTaxes)}
-                    </span>
-                  </div>
                   <div className="flex justify-between text-orange-600">
-                    <span>IRPJ ({formData.irpjRate}%):</span>
+                    <span>Simples Nacional ({formData.simplesRate}%):</span>
                     <span className="font-semibold">
-                      {formatCurrency(calculated.irpjAmount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-orange-600">
-                    <span>CSLL ({formData.csllRate}%):</span>
-                    <span className="font-semibold">
-                      {formatCurrency(calculated.csllAmount)}
+                      -{formatCurrency(calculated.simplesAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between border-t pt-2 text-green-600">
