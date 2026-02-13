@@ -223,6 +223,17 @@ export async function deleteCustomer(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Desvincular registros que referenciam este cliente
+  await db.update(orders).set({ customerId: null }).where(eq(orders.customerId, id));
+  await db.update(budgets).set({ customerId: null }).where(eq(budgets.customerId, id));
+  await db.update(projects).set({ customerId: null }).where(eq(projects.customerId, id));
+  await db.update(calendarEvents).set({ customerId: null }).where(eq(calendarEvents.customerId, id));
+  await db.update(proposals).set({ customerId: null }).where(eq(proposals.customerId, id));
+  await db.delete(accountsReceivable).where(eq(accountsReceivable.customerId, id));
+  await db.delete(contracts).where(eq(contracts.customerId, id));
+  await db.delete(tickets).where(eq(tickets.customerId, id));
+  await db.delete(productSubscriptions).where(eq(productSubscriptions.customerId, id));
+
   return await db.delete(customers).where(eq(customers.id, id));
 }
 
