@@ -17,24 +17,6 @@ export default function Home() {
   const { data: monthlySummary } = trpc.dashboard.monthlySummary.useQuery({ year: currentYear });
   const { data: cashFlow, isLoading: cashFlowLoading, error: cashFlowError } = trpc.dashboard.cashFlow.useQuery({ year: currentYear });
   const { data: paymentsDue, refetch: refetchPaymentsDue } = trpc.dashboard.paymentsDueToday.useQuery();
-  const { data: recurringExpensesDue, refetch: refetchRecurringExpenses } = trpc.dashboard.recurringExpensesDueToday.useQuery();
-
-  const markAsPaidMutation = trpc.recurringExpenses.markAsPaid.useMutation({
-    onSuccess: () => {
-      toast.success("Despesa marcada como paga!");
-      refetchRecurringExpenses();
-    },
-    onError: (error: any) => {
-      toast.error(`Erro ao marcar como paga: ${error.message}`);
-    },
-  });
-
-  const handleMarkAsPaid = (expenseId: number, expenseName: string) => {
-    if (confirm(`Confirmar pagamento de "${expenseName}"?`)) {
-      markAsPaidMutation.mutate({ id: expenseId });
-    }
-  };
-
   const markAccountAsPaidMutation = trpc.accountsPayable.markAsPaid.useMutation({
     onSuccess: () => {
       toast.success("Conta marcada como paga!");
@@ -283,70 +265,6 @@ export default function Home() {
                       {paymentsDue.count > 5 && (
                         <p className="text-xs text-center text-muted-foreground pt-2">
                           + {paymentsDue.count - 5} outras contas
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Alerta de Despesas Recorrentes Vencendo Hoje */}
-            {recurringExpensesDue && recurringExpensesDue.count > 0 && (
-              <Card className="border-blue-200 bg-blue-50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-blue-600" />
-                    <CardTitle className="text-lg text-blue-900">
-                      Despesas Recorrentes Vencendo Hoje
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-white rounded-lg">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total a Pagar</p>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {formatPrice(recurringExpensesDue.totalAmount)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Quantidade</p>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {recurringExpensesDue.count}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-blue-900">Despesas:</p>
-                      {recurringExpensesDue.expenses.slice(0, 5).map((row: any) => (
-                        <div key={row.expense.id} className="flex justify-between items-center gap-2 p-2 bg-white rounded text-sm">
-                          <div className="flex-1">
-                            <p className="font-medium">{row.expense.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {row.supplier?.name || "Sem fornecedor"} • {row.expense.frequency === 'monthly' ? 'Mensal' : row.expense.frequency === 'quarterly' ? 'Trimestral' : 'Anual'}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-blue-600">
-                              {formatPrice(parseFloat(row.expense.amount))}
-                            </p>
-                            <button
-                              onClick={() => handleMarkAsPaid(row.expense.id, row.expense.name)}
-                              disabled={markAsPaidMutation.isPending}
-                              className="p-1.5 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
-                              title="Marcar como pago"
-                            >
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {recurringExpensesDue.count > 5 && (
-                        <p className="text-xs text-center text-muted-foreground pt-2">
-                          + {recurringExpensesDue.count - 5} outras despesas
                         </p>
                       )}
                     </div>

@@ -22,7 +22,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingCart, Package, DollarSign, TrendingUp, FileText, Building2, Briefcase, CalendarDays, FileSignature, Repeat, CheckSquare, Headphones, Calculator, FileStack, ExternalLink, Clock, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, ShoppingCart, Package, DollarSign, TrendingUp, FileText, Building2, Briefcase, CalendarDays, FileSignature, CheckSquare, Headphones, Calculator, FileStack, ExternalLink, Clock, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -36,7 +36,6 @@ const menuItems = [
   { icon: FileSignature, label: "Contratos", path: "/contracts" },
   { icon: DollarSign, label: "Contas a Pagar", path: "/accounts-payable" },
   { icon: TrendingUp, label: "Contas a Receber", path: "/accounts-receivable" },
-  { icon: Repeat, label: "Despesas Recorrentes", path: "/recurring-expenses" },
   { icon: CalendarDays, label: "Calendário", path: "/calendar" },
   { icon: Briefcase, label: "Projetos", path: "/projects" },
   { icon: CheckSquare, label: "Tarefas", path: "/tasks" },

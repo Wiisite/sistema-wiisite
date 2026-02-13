@@ -21,7 +21,6 @@ const Projects = lazy(() => import("./pages/Projects"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Leads = lazy(() => import("./pages/Leads"));
 const Contracts = lazy(() => import("./pages/Contracts"));
-const RecurringExpenses = lazy(() => import("./pages/RecurringExpenses"));
 const Tasks = lazy(() => import("./pages/Tasks"));
 const Support = lazy(() => import("./pages/Support"));
 const Budgets = lazy(() => import("./pages/Budgets"));
@@ -59,7 +58,6 @@ function Router() {
         <Route path={"/leads"} component={Leads} />
         <Route path={"/budgets"} component={Budgets} />
         <Route path={"/contracts"} component={Contracts} />
-        <Route path={"/recurring-expenses"} component={RecurringExpenses} />
         <Route path={"/tasks"} component={Tasks} />
         <Route path={"/support"} component={Support} />
         <Route path={"/settings/company"} component={CompanySettings} />
