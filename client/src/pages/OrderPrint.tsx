@@ -178,7 +178,8 @@ export default function OrderPrint() {
 
       <div className="print-container">
         <div className="header">
-          <div className="company-name">Sistema ERP Empresarial</div>
+          <div className="company-name">WIISITE DIGITAL LTDA - ME</div>
+          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>CNPJ: 55.895.370/0001-26 | Tel: (11) 99492-3018</div>
           <div className="document-title">Pedido #{order.orderNumber}</div>
         </div>
 
@@ -239,7 +240,7 @@ export default function OrderPrint() {
 
         <div className="footer">
           <p>Documento gerado em {new Date().toLocaleString("pt-BR")}</p>
-          <p>Sistema ERP Empresarial - Gestão Integrada</p>
+          <p>WIISITE DIGITAL LTDA - ME | CNPJ: 55.895.370/0001-26</p>
         </div>
       </div>
     </>
