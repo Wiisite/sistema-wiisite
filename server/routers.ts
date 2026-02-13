@@ -1038,15 +1038,8 @@ export const appRouter = router({
         })).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        // Buscar configurações fiscais
-        const taxConfig = await db.getTaxSettings();
-        if (!taxConfig) throw new TRPCError({ code: "NOT_FOUND", message: "Configurações fiscais não encontradas" });
-
-        // Usar impostos do input se fornecidos, senão usar das configurações
-        const cbsRate = input.cbsRate ?? Number(taxConfig.cbsRate);
-        const ibsRate = input.ibsRate ?? Number(taxConfig.ibsRate);
-        const irpjRate = input.irpjRate ?? Number(taxConfig.irpjRate);
-        const csllRate = input.csllRate ?? Number(taxConfig.csllRate);
+        // Alíquota Simples Nacional (vem no campo cbsRate do frontend)
+        const simplesRate = input.cbsRate ?? 10;
 
         // Calcular custos
         const totalDirectCosts = input.laborCost + input.materialCost + input.thirdPartyCost + input.otherDirectCosts;
@@ -1055,23 +1048,11 @@ export const appRouter = router({
         // Calcular preço bruto (custo + margem)
         const grossValue = input.profitMargin >= 100 ? totalCosts : totalCosts / (1 - (input.profitMargin / 100));
 
-        // Calcular impostos sobre consumo
-        const cbsAmount = grossValue * (cbsRate / 100);
-        const ibsAmount = grossValue * (ibsRate / 100);
-        const totalConsumptionTaxes = cbsAmount + ibsAmount;
-
-        // Receita líquida após impostos de consumo
-        const netRevenue = grossValue - totalConsumptionTaxes;
-
-        // Lucro antes de IRPJ/CSLL
-        const profitBeforeTaxes = netRevenue - totalCosts;
-
-        // Simular IRPJ e CSLL
-        const irpjAmount = profitBeforeTaxes * (irpjRate / 100);
-        const csllAmount = profitBeforeTaxes * (csllRate / 100);
+        // Imposto Simples Nacional
+        const simplesAmount = grossValue * (simplesRate / 100);
 
         // Lucro líquido final
-        const netProfit = profitBeforeTaxes - irpjAmount - csllAmount;
+        const netProfit = grossValue - totalCosts - simplesAmount;
 
         const { selectedProducts, ...inputWithoutProducts } = input;
 
@@ -1085,23 +1066,23 @@ export const appRouter = router({
           otherDirectCosts: input.otherDirectCosts.toString(),
           indirectCostsTotal: input.indirectCostsTotal.toString(),
           profitMargin: input.profitMargin.toString(),
-          cbsRate: cbsRate.toString(),
-          ibsRate: ibsRate.toString(),
-          irpjRate: irpjRate.toString(),
-          csllRate: csllRate.toString(),
+          cbsRate: simplesRate.toString(),
+          ibsRate: "0",
+          irpjRate: "0",
+          csllRate: "0",
           totalDirectCosts: totalDirectCosts.toString(),
           totalCosts: totalCosts.toString(),
           grossValue: grossValue.toString(),
-          cbsAmount: cbsAmount.toString(),
-          ibsAmount: ibsAmount.toString(),
-          totalConsumptionTaxes: totalConsumptionTaxes.toString(),
-          netRevenue: netRevenue.toString(),
-          profitBeforeTaxes: profitBeforeTaxes.toString(),
-          irpjAmount: irpjAmount.toString(),
-          csllAmount: csllAmount.toString(),
+          cbsAmount: simplesAmount.toString(),
+          ibsAmount: "0",
+          totalConsumptionTaxes: simplesAmount.toString(),
+          netRevenue: (grossValue - simplesAmount).toString(),
+          profitBeforeTaxes: netProfit.toString(),
+          irpjAmount: "0",
+          csllAmount: "0",
           netProfit: netProfit.toString(),
           finalPrice: grossValue.toString(),
-          taxRegime: taxConfig.taxRegime,
+          taxRegime: "new",
           createdBy: ctx.user.id,
         };
 
@@ -1154,9 +1135,6 @@ export const appRouter = router({
           rest.thirdPartyCost !== undefined || rest.otherDirectCosts !== undefined ||
           rest.indirectCostsTotal !== undefined || rest.profitMargin !== undefined) {
 
-          const taxConfig = await db.getTaxSettings();
-          if (!taxConfig) throw new TRPCError({ code: "NOT_FOUND", message: "Configurações fiscais não encontradas" });
-
           // Buscar orçamento atual para pegar valores não alterados
           const current = await db.getBudgetById(id);
           if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
@@ -1167,32 +1145,31 @@ export const appRouter = router({
           const otherDirectCosts = rest.otherDirectCosts !== undefined ? rest.otherDirectCosts : Number(current.budget.otherDirectCosts);
           const indirectCostsTotal = rest.indirectCostsTotal !== undefined ? rest.indirectCostsTotal : Number(current.budget.indirectCostsTotal);
           const profitMargin = rest.profitMargin !== undefined ? rest.profitMargin : Number(current.budget.profitMargin);
+          const simplesRate = rest.cbsRate !== undefined ? rest.cbsRate : Number(current.budget.cbsRate) || 10;
 
           // Calcular custos
           const totalDirectCosts = laborCost + materialCost + thirdPartyCost + otherDirectCosts;
           const totalCosts = totalDirectCosts + indirectCostsTotal;
-          const grossValue = totalCosts / (1 - (profitMargin / 100));
-          const cbsAmount = grossValue * (Number(taxConfig.cbsRate) / 100);
-          const ibsAmount = grossValue * (Number(taxConfig.ibsRate) / 100);
-          const totalConsumptionTaxes = cbsAmount + ibsAmount;
-          const netRevenue = grossValue - totalConsumptionTaxes;
-          const profitBeforeTaxes = netRevenue - totalCosts;
-          const irpjAmount = profitBeforeTaxes * (Number(taxConfig.irpjRate) / 100);
-          const csllAmount = profitBeforeTaxes * (Number(taxConfig.csllRate) / 100);
-          const netProfit = profitBeforeTaxes - irpjAmount - csllAmount;
+          const grossValue = profitMargin >= 100 ? totalCosts : totalCosts / (1 - (profitMargin / 100));
+          const simplesAmount = grossValue * (simplesRate / 100);
+          const netProfit = grossValue - totalCosts - simplesAmount;
 
           const data: any = {
             ...rest,
+            cbsRate: simplesRate,
+            ibsRate: 0,
+            irpjRate: 0,
+            csllRate: 0,
             totalDirectCosts,
             totalCosts,
             grossValue,
-            cbsAmount,
-            ibsAmount,
-            totalConsumptionTaxes,
-            netRevenue,
-            profitBeforeTaxes,
-            irpjAmount,
-            csllAmount,
+            cbsAmount: simplesAmount,
+            ibsAmount: 0,
+            totalConsumptionTaxes: simplesAmount,
+            netRevenue: grossValue - simplesAmount,
+            profitBeforeTaxes: netProfit,
+            irpjAmount: 0,
+            csllAmount: 0,
             netProfit,
             finalPrice: grossValue,
           };

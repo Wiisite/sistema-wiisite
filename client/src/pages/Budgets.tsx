@@ -457,33 +457,18 @@ export default function Budgets() {
         {/* Conteúdo Principal */}
         <div className="lg:col-span-3 space-y-6">
 
-      {/* Configurações Fiscais */}
-      {taxSettings && (
+      {/* Regime Tributário */}
+      {!showForm && (
         <Card className="p-4 mb-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200">
           <div className="flex items-start gap-2">
             <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                Configurações Fiscais Ativas
+                Simples Nacional - Anexo III
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">CBS:</span>{" "}
-                  <span className="font-semibold">{taxSettings.cbsRate}%</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">IBS:</span>{" "}
-                  <span className="font-semibold">{taxSettings.ibsRate}%</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">IRPJ:</span>{" "}
-                  <span className="font-semibold">{taxSettings.irpjRate}%</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">CSLL:</span>{" "}
-                  <span className="font-semibold">{taxSettings.csllRate}%</span>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Alíquota padrão: <span className="font-semibold">10%</span> (editável por orçamento)
+              </p>
             </div>
           </div>
         </Card>
