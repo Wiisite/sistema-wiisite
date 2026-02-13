@@ -139,7 +139,7 @@ export default function Orders() {
     const calculatedLaborCost = formData.laborHours * formData.laborRate;
     const totalDirectCosts = calculatedLaborCost + formData.materialCost + formData.thirdPartyCost + formData.otherDirectCosts;
     const totalCosts = totalDirectCosts + formData.indirectCostsTotal;
-    const grossValue = formData.profitMargin >= 100 ? totalCosts : totalCosts / (1 - formData.profitMargin / 100);
+    const grossValue = totalCosts === 0 ? 0 : formData.profitMargin >= 100 ? totalCosts : totalCosts / (1 - formData.profitMargin / 100);
     const simplesAmount = grossValue * (formData.simplesRate / 100);
     const netProfit = grossValue - totalCosts - simplesAmount;
     return { totalDirectCosts, totalCosts, grossValue, simplesAmount, netProfit, finalPrice: grossValue };
@@ -272,7 +272,7 @@ export default function Orders() {
                 Novo Pedido
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingOrder ? "Editar Pedido" : "Novo Pedido"}</DialogTitle>
               </DialogHeader>
