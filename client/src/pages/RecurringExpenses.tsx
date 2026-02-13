@@ -59,6 +59,9 @@ const statusMap = {
 export default function RecurringExpenses() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     category: "other",
@@ -73,6 +76,13 @@ export default function RecurringExpenses() {
 
   const { data: expenses, refetch } = trpc.recurringExpenses.list.useQuery();
   const { data: suppliers } = trpc.suppliers.list.useQuery();
+
+  // Extrair categorias customizadas das despesas existentes
+  const existingCustomCategories = expenses
+    ?.map((e: any) => e.expense.category)
+    .filter((c: string) => !(c in categoryMap))
+    .filter((c: string, i: number, arr: string[]) => arr.indexOf(c) === i) || [];
+  const allCustomCategories = [...new Set([...existingCustomCategories, ...customCategories])];
 
   const createMutation = trpc.recurringExpenses.create.useMutation({
     onSuccess: () => {
@@ -153,7 +163,7 @@ export default function RecurringExpenses() {
     e.preventDefault();
     const data = {
       name: formData.name,
-      category: formData.category as "electricity" | "water" | "phone" | "internet" | "rent" | "insurance" | "software" | "maintenance" | "other",
+      category: formData.category,
       supplierId: formData.supplierId ? parseInt(formData.supplierId) : undefined,
       amount: formData.amount,
       frequency: formData.frequency as "monthly" | "quarterly" | "yearly",
@@ -260,26 +270,82 @@ export default function RecurringExpenses() {
                   </div>
                   <div>
                     <Label htmlFor="category">Categoria *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, category: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(categoryMap).map(([key, { label, icon: Icon }]) => (
-                          <SelectItem key={key} value={key}>
-                            <div className="flex items-center gap-2">
-                              <Icon className="h-4 w-4" />
-                              {label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select
+                        value={formData.category}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, category: value })
+                        }
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(categoryMap).map(([key, { label, icon: Icon }]) => (
+                            <SelectItem key={key} value={key}>
+                              <div className="flex items-center gap-2">
+                                <Icon className="h-4 w-4" />
+                                {label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                          {allCustomCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              <div className="flex items-center gap-2">
+                                <MoreHorizontal className="h-4 w-4" />
+                                {cat}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={() => setShowNewCategory(!showNewCategory)}
+                        title="Nova categoria"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {showNewCategory && (
+                      <div className="flex gap-2 mt-2">
+                        <Input
+                          placeholder="Nome da nova categoria"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (newCategoryName.trim()) {
+                                const name = newCategoryName.trim();
+                                setCustomCategories(prev => [...prev, name]);
+                                setFormData({ ...formData, category: name });
+                                setNewCategoryName("");
+                                setShowNewCategory(false);
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            if (newCategoryName.trim()) {
+                              const name = newCategoryName.trim();
+                              setCustomCategories(prev => [...prev, name]);
+                              setFormData({ ...formData, category: name });
+                              setNewCategoryName("");
+                              setShowNewCategory(false);
+                            }
+                          }}
+                          disabled={!newCategoryName.trim()}
+                        >
+                          Adicionar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="supplierId">Fornecedor</Label>
@@ -456,7 +522,7 @@ export default function RecurringExpenses() {
               </TableHeader>
               <TableBody>
                 {expenses && expenses.length > 0 ? expenses.map((item: any) => {
-                  const category = categoryMap[item.expense.category as keyof typeof categoryMap];
+                  const category = categoryMap[item.expense.category as keyof typeof categoryMap] || { label: item.expense.category, icon: MoreHorizontal, color: "bg-gray-400" };
                   const Icon = category.icon;
                   return (
                     <TableRow key={item.expense.id}>

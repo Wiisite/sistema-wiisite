@@ -52,6 +52,8 @@ export default function AccountsPayable() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear] = useState(new Date().getFullYear());
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "paid">("all");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showNewCategory, setShowNewCategory] = useState(false);
   const [formData, setFormData] = useState({
     categoryId: "",
     description: "",
@@ -68,7 +70,19 @@ export default function AccountsPayable() {
 
   const { data: accounts, isLoading, refetch } = trpc.accountsPayable.list.useQuery();
   const { data: suppliers } = trpc.suppliers.list.useQuery();
-  const { data: categories } = trpc.financialCategories.list.useQuery({ type: "expense" });
+  const { data: categories, refetch: refetchCategories } = trpc.financialCategories.list.useQuery({ type: "expense" });
+
+  const createCategoryMutation = trpc.financialCategories.create.useMutation({
+    onSuccess: (result: any) => {
+      toast.success("Categoria criada!");
+      refetchCategories();
+      setNewCategoryName("");
+      setShowNewCategory(false);
+    },
+    onError: (error) => {
+      toast.error("Erro ao criar categoria: " + error.message);
+    },
+  });
 
   const createMutation = trpc.accountsPayable.create.useMutation({
     onSuccess: () => {
@@ -276,21 +290,61 @@ export default function AccountsPayable() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="categoryId">Categoria</Label>
-                    <Select
-                      value={formData.categoryId}
-                      onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories?.map((category) => (
-                          <SelectItem key={category.id} value={category.id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select
+                        value={formData.categoryId}
+                        onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories?.map((category) => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={() => setShowNewCategory(!showNewCategory)}
+                        title="Nova categoria"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {showNewCategory && (
+                      <div className="flex gap-2 mt-2">
+                        <Input
+                          placeholder="Nome da nova categoria"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (newCategoryName.trim()) {
+                                createCategoryMutation.mutate({ name: newCategoryName.trim(), type: "expense" });
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            if (newCategoryName.trim()) {
+                              createCategoryMutation.mutate({ name: newCategoryName.trim(), type: "expense" });
+                            }
+                          }}
+                          disabled={createCategoryMutation.isPending || !newCategoryName.trim()}
+                        >
+                          Salvar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="description">Descrição *</Label>

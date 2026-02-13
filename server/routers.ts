@@ -878,14 +878,14 @@ export const appRouter = router({
   // ============ RECURRING EXPENSES ============
   recurringExpenses: router({
     list: protectedProcedure
-      .input(z.object({ status: z.enum(["active", "paused", "cancelled"]).optional(), category: z.enum(["electricity", "water", "phone", "internet", "rent", "insurance", "software", "maintenance", "other"]).optional() }).optional())
+      .input(z.object({ status: z.enum(["active", "paused", "cancelled"]).optional(), category: z.string().optional() }).optional())
       .query(async ({ input }) => {
         return await db.getRecurringExpenses(input);
       }),
     create: protectedProcedure
       .input(z.object({
         name: z.string(),
-        category: z.enum(["electricity", "water", "phone", "internet", "rent", "insurance", "software", "maintenance", "other"]),
+        category: z.string(),
         supplierId: z.number().optional(),
         amount: z.string(),
         frequency: z.enum(["monthly", "quarterly", "yearly"]),
