@@ -2165,6 +2165,7 @@ export async function convertBudgetToOrder(budgetId: number, userId: number) {
       phone: budget.customerPhone || null,
       document: budget.customerDocument || null,
       address: budget.customerAddress || null,
+      neighborhood: budget.customerNeighborhood || null,
       city: budget.customerCity || null,
       state: budget.customerState || null,
       zipCode: budget.customerZipCode || null,

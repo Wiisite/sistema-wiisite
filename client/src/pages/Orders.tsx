@@ -216,6 +216,18 @@ export default function Orders() {
     setEditingOrder(row.order);
     
     // Se o pedido tem items, popular o formulário
+    const costDefaults = {
+      laborHours: 0,
+      laborRate: 0,
+      materialCost: 0,
+      thirdPartyCost: 0,
+      otherDirectCosts: 0,
+      indirectCostsTotal: 0,
+      profitMargin: 50,
+      simplesRate: 10,
+      installments: 1,
+    };
+
     if (row.items && row.items.length > 0) {
       setFormData({
         customerId: row.order.customerId ? row.order.customerId.toString() : "",
@@ -227,14 +239,15 @@ export default function Orders() {
           subtotal: item.item.subtotal,
         })),
         notes: row.order.notes || "",
+        ...costDefaults,
       });
     } else {
-      // Se não tem items, usar dados básicos
       setFormData({
         customerId: row.order.customerId ? row.order.customerId.toString() : "",
         orderNumber: row.order.orderNumber,
         items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
         notes: row.order.notes || "",
+        ...costDefaults,
       });
     }
     
