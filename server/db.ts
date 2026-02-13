@@ -1910,6 +1910,41 @@ export async function generateRecurringExpensesBills(userId: number, month?: num
     const dueDate = new Date(targetYear, targetMonth, expense.dayOfMonth);
     const monthName = dueDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
+    // Mapear categoria da despesa recorrente para financialCategory
+    const categoryNameMap: Record<string, string> = {
+      electricity: "Energia Elétrica",
+      water: "Água",
+      phone: "Telefone",
+      internet: "Internet",
+      rent: "Aluguel",
+      insurance: "Seguro",
+      software: "Software",
+      maintenance: "Manutenção",
+      other: "Outro",
+    };
+    const categoryName = categoryNameMap[expense.category] || expense.category;
+
+    // Buscar ou criar a categoria financeira
+    let categoryId: number | undefined;
+    const existingCategory = await db.select()
+      .from(financialCategories)
+      .where(and(
+        eq(financialCategories.name, categoryName),
+        eq(financialCategories.type, "expense")
+      ))
+      .limit(1);
+
+    if (existingCategory.length > 0) {
+      categoryId = existingCategory[0].id;
+    } else {
+      const result: any = await db.insert(financialCategories).values({
+        name: categoryName,
+        type: "expense",
+        createdBy: userId,
+      });
+      categoryId = Number(result[0].insertId);
+    }
+
     const payableData: any = {
       amount: expense.amount,
       dueDate,
@@ -1917,6 +1952,9 @@ export async function generateRecurringExpensesBills(userId: number, month?: num
       description: `${expense.name} - ${monthName}`,
       notes: `Gerado automaticamente de despesa recorrente #${expense.id}`,
       createdBy: userId,
+      categoryId,
+      installmentNumber: 1,
+      totalInstallments: 1,
     };
 
     if (expense.supplierId) {
