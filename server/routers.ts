@@ -1004,6 +1004,12 @@ export const appRouter = router({
         return await db.getBudgetById(input.id);
       }),
 
+    getItems: protectedProcedure
+      .input(z.object({ budgetId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getBudgetItems(input.budgetId);
+      }),
+
     create: protectedProcedure
       .input(z.object({
         customerId: z.number().optional(),
@@ -1126,9 +1132,14 @@ export const appRouter = router({
         status: z.enum(["draft", "sent", "approved", "rejected"]).optional(),
         notes: z.string().optional(),
         installments: z.number().optional(),
+        selectedProducts: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number(),
+          price: z.number(),
+        })).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const { id, ...rest } = input;
+        const { id, selectedProducts, ...rest } = input;
 
         // Se estiver editando custos, recalcular tudo
         if (rest.laborCost !== undefined || rest.materialCost !== undefined ||
@@ -1174,7 +1185,17 @@ export const appRouter = router({
             finalPrice: grossValue,
           };
 
-          return await db.updateBudget(id, data);
+          const result = await db.updateBudget(id, data);
+
+          // Atualizar itens do orçamento
+          if (selectedProducts !== undefined) {
+            await db.deleteBudgetItems(id);
+            if (selectedProducts.length > 0) {
+              await db.saveBudgetItems(id, selectedProducts);
+            }
+          }
+
+          return result;
         }
 
         // Converter campos numéricos para string se existirem
@@ -1187,7 +1208,17 @@ export const appRouter = router({
         if (data.indirectCostsTotal !== undefined) data.indirectCostsTotal = data.indirectCostsTotal.toString();
         if (data.profitMargin !== undefined) data.profitMargin = data.profitMargin.toString();
 
-        return await db.updateBudget(id, data);
+        const result = await db.updateBudget(id, data);
+
+        // Atualizar itens do orçamento
+        if (selectedProducts !== undefined) {
+          await db.deleteBudgetItems(id);
+          if (selectedProducts.length > 0) {
+            await db.saveBudgetItems(id, selectedProducts);
+          }
+        }
+
+        return result;
       }),
 
     delete: protectedProcedure

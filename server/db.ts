@@ -2108,6 +2108,13 @@ export async function deleteBudget(id: number) {
   return await db.delete(budgets).where(eq(budgets.id, id));
 }
 
+export async function deleteBudgetItems(budgetId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.delete(budgetItems).where(eq(budgetItems.budgetId, budgetId));
+}
+
 export async function saveBudgetItems(budgetId: number, selectedProducts: Array<{ productId: number; quantity: number; price: number }>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

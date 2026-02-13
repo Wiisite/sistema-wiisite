@@ -53,6 +53,7 @@ export default function Budgets() {
     finalPrice: 0,
   });
 
+  const utils = trpc.useUtils();
   const { data: budgets, refetch } = trpc.budgets.list.useQuery();
   const { data: customers } = trpc.customers.list.useQuery();
   const { data: products } = trpc.products.list.useQuery();
@@ -277,17 +278,16 @@ export default function Budgets() {
     };
 
     if (editingId) {
-      const { selectedProducts: _, ...updateData } = dataToSubmit;
       updateMutation.mutate({
         id: editingId,
-        ...updateData,
+        ...dataToSubmit,
       });
     } else {
       createMutation.mutate(dataToSubmit);
     }
   };
 
-  const handleEdit = (budget: any) => {
+  const handleEdit = async (budget: any) => {
     setFormData({
       title: budget.title,
       description: budget.description || "",
@@ -314,6 +314,23 @@ export default function Budgets() {
       status: budget.status || "draft",
       simplesRate: Number(budget.cbsRate) || 10,
     });
+
+    // Carregar itens existentes do orçamento
+    try {
+      const items = await utils.budgets.getItems.fetch({ budgetId: budget.id });
+      if (items && items.length > 0) {
+        setSelectedProducts(items.map((row: any) => ({
+          productId: row.item.productId,
+          quantity: Number(row.item.quantity),
+          price: Number(row.item.unitPrice),
+        })));
+      } else {
+        setSelectedProducts([]);
+      }
+    } catch {
+      setSelectedProducts([]);
+    }
+
     setEditingId(budget.id);
     setShowForm(true);
   };
