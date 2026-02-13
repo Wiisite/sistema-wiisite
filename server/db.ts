@@ -1857,6 +1857,39 @@ export async function generateRecurringExpensesBills(userId: number, month?: num
   const skipped = [];
 
   for (const expense of activeExpenses) {
+    // Verificar se a despesa deve ser gerada neste mês com base na frequência
+    const startDate = new Date(expense.startDate);
+    const startMonth = startDate.getMonth();
+    const startYear = startDate.getFullYear();
+
+    // Verificar se o mês alvo é anterior ao início da despesa
+    if (targetYear < startYear || (targetYear === startYear && targetMonth < startMonth)) {
+      skipped.push({ id: expense.id, name: expense.name, reason: "Antes da data de início" });
+      continue;
+    }
+
+    // Verificar se o mês alvo é posterior ao fim da despesa
+    if (expense.endDate) {
+      const endDate = new Date(expense.endDate);
+      if (targetYear > endDate.getFullYear() || (targetYear === endDate.getFullYear() && targetMonth > endDate.getMonth())) {
+        skipped.push({ id: expense.id, name: expense.name, reason: "Após data de término" });
+        continue;
+      }
+    }
+
+    // Calcular diferença em meses desde o início
+    const monthsDiff = (targetYear - startYear) * 12 + (targetMonth - startMonth);
+
+    // Verificar frequência
+    if (expense.frequency === "quarterly" && monthsDiff % 3 !== 0) {
+      skipped.push({ id: expense.id, name: expense.name, reason: "Não é mês trimestral" });
+      continue;
+    }
+    if (expense.frequency === "yearly" && monthsDiff % 12 !== 0) {
+      skipped.push({ id: expense.id, name: expense.name, reason: "Não é mês anual" });
+      continue;
+    }
+
     // Verificar se já foi gerada para este mês
     const existingBill = await db.select()
       .from(accountsPayable)
