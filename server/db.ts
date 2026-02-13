@@ -694,24 +694,22 @@ export async function getDashboardStats(startDate?: Date, endDate?: Date) {
   const db = await getDb();
   if (!db) return null;
 
-  const conditions = [];
-  if (startDate) conditions.push(gte(orders.orderDate, startDate));
-  if (endDate) conditions.push(lte(orders.orderDate, endDate));
-
-  // Total de vendas
+  // Total de vendas - pedidos aprovados e concluídos
   const salesQuery = db.select({
     total: sql<string>`COALESCE(SUM(${orders.totalAmount}), 0)`
-  }).from(orders).where(and(...conditions, eq(orders.status, "completed")));
+  }).from(orders).where(
+    or(eq(orders.status, "completed"), eq(orders.status, "approved"))
+  );
 
-  // Contas a pagar
+  // Contas a pagar - apenas pendentes (não pagas)
   const payableQuery = db.select({
-    pending: sql<string>`COALESCE(SUM(CASE WHEN ${accountsPayable.status} = 'pending' THEN ${accountsPayable.amount} ELSE 0 END), 0)`,
+    pending: sql<string>`COALESCE(SUM(CASE WHEN ${accountsPayable.status} IN ('pending', 'overdue') THEN ${accountsPayable.amount} ELSE 0 END), 0)`,
     paid: sql<string>`COALESCE(SUM(CASE WHEN ${accountsPayable.status} = 'paid' THEN ${accountsPayable.amount} ELSE 0 END), 0)`,
   }).from(accountsPayable);
 
-  // Contas a receber
+  // Contas a receber - apenas pendentes (não recebidas)
   const receivableQuery = db.select({
-    pending: sql<string>`COALESCE(SUM(CASE WHEN ${accountsReceivable.status} = 'pending' THEN ${accountsReceivable.amount} ELSE 0 END), 0)`,
+    pending: sql<string>`COALESCE(SUM(CASE WHEN ${accountsReceivable.status} IN ('pending', 'overdue') THEN ${accountsReceivable.amount} ELSE 0 END), 0)`,
     received: sql<string>`COALESCE(SUM(CASE WHEN ${accountsReceivable.status} = 'received' THEN ${accountsReceivable.amount} ELSE 0 END), 0)`,
   }).from(accountsReceivable);
 
