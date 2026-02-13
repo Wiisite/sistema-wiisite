@@ -472,17 +472,7 @@ export type InsertTaskChecklist = typeof taskChecklists.$inferInsert;
 export const recurringExpenses = mysqlTable("recurring_expenses", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  category: mysqlEnum("category", [
-    "electricity",
-    "water",
-    "phone",
-    "internet",
-    "rent",
-    "insurance",
-    "software",
-    "maintenance",
-    "other"
-  ]).default("other").notNull(),
+  category: varchar("category", { length: 255 }).default("other").notNull(),
   supplierId: int("supplierId").references(() => suppliers.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   frequency: mysqlEnum("frequency", ["monthly", "quarterly", "yearly"]).default("monthly").notNull(),
@@ -702,6 +692,6 @@ export type ContractStatus = "active" | "suspended" | "cancelled" | "expired";
 export type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
 export type TicketStatus = "open" | "in_progress" | "waiting_customer" | "resolved" | "closed";
 export type RecurringExpenseStatus = "active" | "paused" | "cancelled";
-export type RecurringExpenseCategory = "electricity" | "water" | "phone" | "internet" | "rent" | "insurance" | "software" | "maintenance" | "other";
+export type RecurringExpenseCategory = string;
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
 export type BudgetStatus = "draft" | "sent" | "approved" | "rejected" | "converted";

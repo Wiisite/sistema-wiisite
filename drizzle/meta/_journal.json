@@ -218,6 +218,13 @@
       "when": 1770922940069,
       "tag": "0030_harsh_dormammu",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1771021635017,
+      "tag": "0031_wandering_shriek",
+      "breakpoints": true
     }
   ]
 }

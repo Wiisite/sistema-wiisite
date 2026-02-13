@@ -1,0 +1,1 @@
+ALTER TABLE `recurring_expenses` MODIFY COLUMN `category` varchar(255) NOT NULL DEFAULT 'other';
