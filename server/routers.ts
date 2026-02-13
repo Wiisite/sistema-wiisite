@@ -1135,7 +1135,7 @@ export const appRouter = router({
         ibsRate: z.number().optional(),
         irpjRate: z.number().optional(),
         csllRate: z.number().optional(),
-        status: z.enum(["draft", "sent", "approved", "rejected"]).optional(),
+        status: z.string().optional(),
         notes: z.string().optional(),
         installments: z.number().optional(),
         selectedProducts: z.array(z.object({
