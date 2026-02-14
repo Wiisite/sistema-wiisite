@@ -1426,9 +1426,14 @@ export const appRouter = router({
         }
       }),
   }),
+
+  admin: router({
+    clearAllData: protectedProcedure
+      .mutation(async () => {
+        return await db.clearAllData();
+      }),
+  }),
 });
-
-
 
 
 

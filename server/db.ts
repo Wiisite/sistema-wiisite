@@ -2470,3 +2470,39 @@ export async function deleteBudgetTemplate(id: number) {
 
   return await db.delete(budgetTemplates).where(eq(budgetTemplates.id, id));
 }
+
+export async function clearAllData() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.execute(sql`SET FOREIGN_KEY_CHECKS = 0`);
+  await db.delete(ticketComments);
+  await db.delete(tickets);
+  await db.delete(taskChecklists);
+  await db.delete(projectChecklists);
+  await db.delete(timeEntries);
+  await db.delete(tasks);
+  await db.delete(contractItems);
+  await db.delete(contracts);
+  await db.delete(proposalItems);
+  await db.delete(proposals);
+  await db.delete(leadActivities);
+  await db.delete(leads);
+  await db.delete(calendarEvents);
+  await db.delete(productSubscriptions);
+  await db.delete(recurringExpenses);
+  await db.delete(budgetItems);
+  await db.delete(budgetTemplates);
+  await db.delete(budgets);
+  await db.delete(accountsReceivable);
+  await db.delete(accountsPayable);
+  await db.delete(financialCategories);
+  await db.delete(orderItems);
+  await db.delete(orders);
+  await db.delete(products);
+  await db.delete(suppliers);
+  await db.delete(customers);
+  await db.delete(projects);
+  await db.execute(sql`SET FOREIGN_KEY_CHECKS = 1`);
+  return { success: true };
+}

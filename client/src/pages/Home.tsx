@@ -301,19 +301,19 @@ export default function Home() {
                         <Line
                           type="monotone"
                           dataKey="Receitas"
-                          stroke="hsl(var(--chart-1))"
+                          stroke="var(--chart-1)"
                           strokeWidth={2}
                         />
                         <Line
                           type="monotone"
                           dataKey="Despesas"
-                          stroke="hsl(var(--chart-5))"
+                          stroke="var(--chart-2)"
                           strokeWidth={2}
                         />
                         <Line
                           type="monotone"
                           dataKey="Saldo"
-                          stroke="hsl(var(--chart-3))"
+                          stroke="var(--chart-3)"
                           strokeWidth={2}
                         />
                       </LineChart>
@@ -340,8 +340,8 @@ export default function Home() {
                           }}
                         />
                         <Legend />
-                        <Bar dataKey="Receitas" fill="hsl(var(--chart-2))" />
-                        <Bar dataKey="Despesas" fill="hsl(var(--chart-5))" />
+                        <Bar dataKey="Receitas" fill="var(--chart-1)" />
+                        <Bar dataKey="Despesas" fill="var(--chart-2)" />
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>

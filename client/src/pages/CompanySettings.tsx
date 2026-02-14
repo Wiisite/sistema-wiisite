@@ -40,6 +40,15 @@ export default function CompanySettings() {
   const { data: settings, isLoading, refetch } = trpc.companySettings.get.useQuery();
   const { fetchAddress, isLoading: isLoadingCep } = useViaCep();
 
+  const clearAllDataMutation = trpc.admin.clearAllData.useMutation({
+    onSuccess: () => {
+      toast.success("Todos os dados foram limpos com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao limpar dados: " + error.message);
+    },
+  });
+
   const upsertMutation = trpc.companySettings.upsert.useMutation({
     onSuccess: (data) => {
       console.log("Save success, response:", data);
@@ -536,6 +545,42 @@ export default function CompanySettings() {
             </Button>
           </div>
         </form>
+
+        {/* Zona de Perigo */}
+        <Card className="border-red-300 mt-8">
+          <CardHeader>
+            <CardTitle className="text-red-600">Zona de Perigo</CardTitle>
+            <CardDescription>Ações irreversíveis. Use com cuidado.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Limpar todos os dados</p>
+                <p className="text-sm text-muted-foreground">Remove todos os clientes, pedidos, orçamentos, contas e demais registros. Configurações da empresa e usuários são mantidos.</p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("ATENÇÃO: Isso vai apagar TODOS os dados do sistema (clientes, pedidos, orçamentos, contas, etc). Deseja continuar?")) {
+                    if (confirm("Tem CERTEZA ABSOLUTA? Esta ação é IRREVERSÍVEL!")) {
+                      clearAllDataMutation.mutate();
+                    }
+                  }
+                }}
+                disabled={clearAllDataMutation.isPending}
+              >
+                {clearAllDataMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Limpando...
+                  </>
+                ) : (
+                  "Limpar Tudo"
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

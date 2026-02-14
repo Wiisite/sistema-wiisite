@@ -841,7 +841,7 @@ export default function Orders() {
                             Cancelar
                           </Button>
                         )}
-                        {(row.order.status === "cancelled") && (
+                        {(row.order.status === "cancelled" || row.order.status === "completed") && (
                           <Button
                             size="sm"
                             variant="destructive"
