@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ export default function Budgets() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const customerDropdownRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -63,6 +65,47 @@ export default function Budgets() {
   
   // Hook para busca de CEP
   const { fetchAddress, isLoading: isLoadingCep } = useViaCep();
+
+  // Filtrar clientes existentes pelo nome digitado
+  const filteredCustomers = useMemo(() => {
+    if (!customers || !formData.customerName || formData.customerName.length < 2) return [];
+    const search = formData.customerName.toLowerCase();
+    return customers.filter((c: any) =>
+      c.name.toLowerCase().includes(search) ||
+      (c.email && c.email.toLowerCase().includes(search)) ||
+      (c.document && c.document.includes(search))
+    ).slice(0, 8);
+  }, [customers, formData.customerName]);
+
+  // Selecionar cliente existente e preencher todos os campos
+  const handleSelectCustomer = (customer: any) => {
+    setFormData(prev => ({
+      ...prev,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerEmail: customer.email || "",
+      customerPhone: customer.phone || "",
+      customerDocument: customer.document || "",
+      customerAddress: customer.address || "",
+      customerNeighborhood: customer.neighborhood || "",
+      customerCity: customer.city || "",
+      customerState: customer.state || "",
+      customerZipCode: customer.zipCode || "",
+    }));
+    setShowCustomerDropdown(false);
+    toast.success(`Cliente "${customer.name}" selecionado!`);
+  };
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target as Node)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Função para buscar endereço pelo CEP
   const handleCepSearch = async () => {
@@ -509,19 +552,40 @@ export default function Budgets() {
                   placeholder="Nome do orçamento"
                 />
               </div>
-              <div>
-                <Label>Nome da Empresa</Label>
+              <div className="relative" ref={customerDropdownRef}>
+                <Label>Cliente {formData.customerId ? <span className="text-green-600 text-xs ml-1">(cadastrado)</span> : formData.customerName ? <span className="text-amber-600 text-xs ml-1">(novo)</span> : null}</Label>
                 <Input
                   value={formData.customerName}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData({
                       ...formData,
                       customerName: e.target.value,
                       customerId: undefined,
-                    })
-                  }
-                  placeholder="Digite o nome da empresa"
+                    });
+                    setShowCustomerDropdown(e.target.value.length >= 2);
+                  }}
+                  onFocus={() => {
+                    if (formData.customerName.length >= 2) setShowCustomerDropdown(true);
+                  }}
+                  placeholder="Digite o nome do cliente para buscar..."
                 />
+                {showCustomerDropdown && filteredCustomers.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {filteredCustomers.map((c: any) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b border-border/50 last:border-0"
+                        onClick={() => handleSelectCustomer(c)}
+                      >
+                        <div className="font-medium text-sm">{c.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {[c.email, c.phone, c.document].filter(Boolean).join(" • ") || "Sem dados adicionais"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
