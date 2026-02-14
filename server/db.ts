@@ -551,11 +551,28 @@ export async function markAccountPayableAsPaid(id: number, paymentDate: Date) {
   return await db.update(accountsPayable).set({ status: "paid", paymentDate }).where(eq(accountsPayable.id, id));
 }
 
+export async function getAccountPayableById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(accountsPayable).where(eq(accountsPayable.id, id)).limit(1);
+  return result[0] || null;
+}
+
 export async function deleteAccountPayable(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   return await db.delete(accountsPayable).where(eq(accountsPayable.id, id));
+}
+
+export async function deleteAccountPayableGroup(parentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Excluir a conta pai e todas as filhas
+  await db.delete(accountsPayable).where(eq(accountsPayable.parentPayableId, parentId));
+  await db.delete(accountsPayable).where(eq(accountsPayable.id, parentId));
 }
 
 export async function deleteAllAccountsPayable() {

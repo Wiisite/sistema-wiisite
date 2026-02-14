@@ -350,9 +350,32 @@ export const appRouter = router({
         amount: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
         dueDate: z.date().optional(),
         notes: z.string().optional(),
+        installments: z.number().min(1).max(120).optional(),
       }))
-      .mutation(async ({ input }) => {
-        const { id, ...data } = input;
+      .mutation(async ({ input, ctx }) => {
+        const { id, installments, ...data } = input;
+
+        // Se parcelas foram alteradas, recriar todas as parcelas
+        if (installments && installments > 0 && data.amount && data.dueDate && data.description) {
+          // Excluir conta atual e parcelas relacionadas (filhas ou irmãs)
+          const current = await db.getAccountPayableById(id);
+          if (current) {
+            const parentId = current.parentPayableId || current.id;
+            // Excluir todas as parcelas do mesmo grupo
+            await db.deleteAccountPayableGroup(parentId);
+          }
+
+          // Recriar com novas parcelas
+          return await db.createAccountPayableWithInstallments({
+            ...data,
+            amount: data.amount,
+            dueDate: data.dueDate,
+            description: data.description,
+            createdBy: ctx.user.id,
+            installments,
+          });
+        }
+
         return await db.updateAccountPayable(id, data);
       }),
 

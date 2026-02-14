@@ -376,9 +376,9 @@ export default function AccountsPayable() {
                       max="120"
                       value={formData.installments}
                       onChange={(e) => setFormData({ ...formData, installments: e.target.value })}
-                      disabled={!!editingAccount}
+                      
                     />
-                    {!editingAccount && parseInt(formData.installments) > 1 && formData.amount && (
+                    {parseInt(formData.installments) > 1 && formData.amount && (
                       <p className="text-sm text-muted-foreground">
                         {parseInt(formData.installments)}x de R$ {(parseFloat(formData.amount) / parseInt(formData.installments)).toFixed(2)}
                       </p>
