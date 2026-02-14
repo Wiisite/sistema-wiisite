@@ -2327,11 +2327,19 @@ export async function convertBudgetToOrder(budgetId: number, userId: number) {
     await db.update(budgets).set({ customerId }).where(eq(budgets.id, budgetId));
   }
 
-  // Gerar número do pedido
+  // Gerar número do pedido baseado no maior número existente
   const year = new Date().getFullYear();
-  const countResult = await db.select({ count: sql<number>`COUNT(*)` }).from(orders);
-  const count = Number(countResult[0]?.count || 0) + 1;
-  const orderNumber = `PED-${year}-${count.toString().padStart(4, '0')}`;
+  const prefix = `PED-${year}-`;
+  const existingOrders = await db.select({ orderNumber: orders.orderNumber })
+    .from(orders)
+    .where(sql`${orders.orderNumber} LIKE ${`${prefix}%`}`);
+  
+  let maxNum = 0;
+  for (const o of existingOrders) {
+    const num = parseInt(o.orderNumber.replace(prefix, ''), 10);
+    if (!isNaN(num) && num > maxNum) maxNum = num;
+  }
+  const orderNumber = `${prefix}${(maxNum + 1).toString().padStart(4, '0')}`;
 
   // Criar pedido
   const orderResult = await db.insert(orders).values({
