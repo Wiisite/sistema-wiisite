@@ -1243,24 +1243,19 @@ export default function Budgets() {
                       </Button>
                     </>
                   )}
-                  {(row.budget.status === "rejected" || (row.order && row.order.status === "cancelled")) && (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        const message = row.budget.status === "rejected" 
-                          ? "Tem certeza que deseja excluir este orçamento rejeitado?"
-                          : "Tem certeza que deseja excluir este orçamento com pedido cancelado?";
-                        if (confirm(message)) {
-                          deleteMutation.mutate({ id: row.budget.id });
-                        }
-                      }}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      if (confirm("Tem certeza que deseja excluir este orçamento?")) {
+                        deleteMutation.mutate({ id: row.budget.id });
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+                  </Button>
                 </div>
               </div>
             </div>
