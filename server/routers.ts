@@ -246,8 +246,40 @@ export const appRouter = router({
         id: z.number(),
         status: z.enum(["pending", "approved", "in_production", "completed", "cancelled"]),
       }))
-      .mutation(async ({ input }) => {
-        return await db.updateOrderStatus(input.id, input.status);
+      .mutation(async ({ input, ctx }) => {
+        const result = await db.updateOrderStatus(input.id, input.status);
+
+        // Ao aprovar pedido, gerar parcelas em contas a receber
+        if (input.status === "approved") {
+          const order = await db.getOrderById(input.id);
+          if (order) {
+            let installments = 1;
+
+            // Buscar número de parcelas do orçamento de origem
+            if (order.order.budgetId) {
+              const budget = await db.getBudgetById(order.order.budgetId);
+              if (budget) {
+                installments = budget.budget.installments || 1;
+              }
+            }
+
+            const totalAmount = parseFloat(order.order.totalAmount as string);
+            const customerName = order.customer?.name || order.order.customerName || "Cliente";
+
+            await db.createAccountReceivableWithInstallments({
+              orderId: order.order.id,
+              customerId: order.order.customerId || 0,
+              description: `Pedido ${order.order.orderNumber} — ${customerName}`,
+              amount: totalAmount.toFixed(2),
+              dueDate: new Date(),
+              status: "pending",
+              createdBy: ctx.user.id,
+              installments,
+            });
+          }
+        }
+
+        return result;
       }),
 
     delete: protectedProcedure
