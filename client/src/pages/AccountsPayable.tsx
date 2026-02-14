@@ -156,7 +156,7 @@ export default function AccountsPayable() {
       categoryId: formData.categoryId ? parseInt(formData.categoryId) : undefined,
       description: formData.description,
       amount: formData.amount,
-      dueDate: new Date(formData.dueDate),
+      dueDate: new Date(formData.dueDate + "T12:00:00"),
       notes: formData.notes,
       installments: parseInt(formData.installments) || 1,
     };

@@ -1019,12 +1019,13 @@ export default function Budgets() {
               {/* Parcelas */}
               <div className="mt-4 p-4 bg-white dark:bg-gray-900 border rounded-lg">
                 <Label className="text-sm font-semibold mb-3 block">Condição de Pagamento</Label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-5 gap-2">
                   {[
                     { value: 1, label: "À Vista" },
                     { value: 3, label: "3x" },
                     { value: 6, label: "6x" },
                     { value: 12, label: "12x" },
+                    { value: 24, label: "24x" },
                   ].map((option) => (
                     <button
                       key={option.value}

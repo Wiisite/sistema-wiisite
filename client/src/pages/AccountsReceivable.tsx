@@ -145,7 +145,7 @@ export default function AccountsReceivable() {
       orderId: formData.orderId ? parseInt(formData.orderId) : undefined,
       description: formData.description,
       amount: formData.amount,
-      dueDate: new Date(formData.dueDate),
+      dueDate: new Date(formData.dueDate + "T12:00:00"),
       notes: formData.notes,
       installments: parseInt(formData.installments) || 1,
     };
