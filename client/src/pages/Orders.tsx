@@ -1,13 +1,7 @@
+import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,21 +11,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Edit, FileText, Plus, Trash2, DollarSign } from "lucide-react";
-import { useState, useMemo } from "react";
+import {
+  Plus,
+  Trash2,
+  DollarSign,
+  TrendingUp,
+  Filter,
+  FileText,
+  Edit2,
+  Check,
+  X,
+  Package,
+  Clock,
+  CheckCircle,
+  XCircle,
+  ShoppingCart,
+} from "lucide-react";
 import { toast } from "sonner";
 
-const statusMap = {
+const statusMap: Record<string, string> = {
   pending: "Pendente",
   approved: "Aprovado",
   in_production: "Em Produção",
@@ -39,23 +39,23 @@ const statusMap = {
   cancelled: "Cancelado",
 };
 
-const statusColors = {
-  pending: "status-pending",
-  approved: "status-approved",
-  in_production: "status-in-production",
-  completed: "status-completed",
-  cancelled: "status-cancelled",
+const statusColorMap: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  approved: "bg-green-100 text-green-800",
+  in_production: "bg-blue-100 text-blue-800",
+  completed: "bg-emerald-100 text-emerald-800",
+  cancelled: "bg-red-100 text-red-800",
 };
 
 export default function Orders() {
-  const [open, setOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [formData, setFormData] = useState({
     customerId: "",
     orderNumber: "",
     items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
     notes: "",
-    // Custos
     laborHours: 0,
     laborRate: 0,
     materialCost: 0,
@@ -75,7 +75,6 @@ export default function Orders() {
     onSuccess: () => {
       toast.success("Pedido criado com sucesso!");
       refetch();
-      setOpen(false);
       resetForm();
     },
     onError: (error) => {
@@ -87,7 +86,6 @@ export default function Orders() {
     onSuccess: () => {
       toast.success("Pedido atualizado com sucesso!");
       refetch();
-      setOpen(false);
       resetForm();
     },
     onError: (error: any) => {
@@ -131,6 +129,7 @@ export default function Orders() {
       simplesRate: 10,
       installments: 1,
     });
+    setShowForm(false);
     setEditingOrder(null);
   };
 
@@ -147,6 +146,14 @@ export default function Orders() {
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  };
+
+  const formatPrice = (price: string) => {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(parseFloat(price));
+  };
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("pt-BR");
   };
 
   const addItem = () => {
@@ -185,8 +192,16 @@ export default function Orders() {
     return formData.items.reduce((sum, item) => sum + parseFloat(item.subtotal || "0"), 0).toFixed(2);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
+    if (!formData.customerId) {
+      toast.error("Selecione um cliente");
+      return;
+    }
+    if (formData.items.some((item) => !item.productId)) {
+      toast.error("Selecione um produto para cada item");
+      return;
+    }
+
     const totalAmount = calculateTotal();
     const data = {
       customerId: parseInt(formData.customerId),
@@ -208,25 +223,8 @@ export default function Orders() {
     }
   };
 
-  const handleStatusChange = (orderId: number, status: "pending" | "approved" | "in_production" | "completed" | "cancelled") => {
-    updateStatusMutation.mutate({ id: orderId, status });
-  };
-
   const handleEdit = (row: any) => {
     setEditingOrder(row.order);
-    
-    // Se o pedido tem items, popular o formulário
-    const costDefaults = {
-      laborHours: 0,
-      laborRate: 0,
-      materialCost: 0,
-      thirdPartyCost: 0,
-      otherDirectCosts: 0,
-      indirectCostsTotal: 0,
-      profitMargin: 50,
-      simplesRate: 10,
-      installments: 1,
-    };
 
     if (row.items && row.items.length > 0) {
       setFormData({
@@ -239,7 +237,15 @@ export default function Orders() {
           subtotal: item.item.subtotal,
         })),
         notes: row.order.notes || "",
-        ...costDefaults,
+        laborHours: 0,
+        laborRate: 0,
+        materialCost: 0,
+        thirdPartyCost: 0,
+        otherDirectCosts: 0,
+        indirectCostsTotal: 0,
+        profitMargin: 50,
+        simplesRate: 10,
+        installments: 1,
       });
     } else {
       setFormData({
@@ -247,416 +253,639 @@ export default function Orders() {
         orderNumber: row.order.orderNumber,
         items: [{ productId: "", quantity: "", unitPrice: "", subtotal: "" }],
         notes: row.order.notes || "",
-        ...costDefaults,
+        laborHours: 0,
+        laborRate: 0,
+        materialCost: 0,
+        thirdPartyCost: 0,
+        otherDirectCosts: 0,
+        indirectCostsTotal: 0,
+        profitMargin: 50,
+        simplesRate: 10,
+        installments: 1,
       });
     }
-    
-    setOpen(true);
+
+    setShowForm(true);
   };
 
-  const formatPrice = (price: string) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(parseFloat(price));
-  };
+  // Filtrar pedidos
+  const filteredOrders = orders?.filter((row: any) => {
+    if (statusFilter === "all") return true;
+    return row.order.status === statusFilter;
+  });
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("pt-BR");
+  // Estatísticas
+  const stats = {
+    total: orders?.length || 0,
+    pending: orders?.filter((r: any) => r.order.status === "pending").length || 0,
+    approved: orders?.filter((r: any) => r.order.status === "approved").length || 0,
+    in_production: orders?.filter((r: any) => r.order.status === "in_production").length || 0,
+    completed: orders?.filter((r: any) => r.order.status === "completed").length || 0,
+    cancelled: orders?.filter((r: any) => r.order.status === "cancelled").length || 0,
   };
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="container py-8">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Pedidos</h1>
+            <h1 className="text-3xl font-bold">Pedidos</h1>
             <p className="text-muted-foreground">
               Gerencie pedidos de vendas e acompanhe o pipeline
             </p>
           </div>
-          <Dialog open={open} onOpenChange={(isOpen) => {
-            setOpen(isOpen);
-            if (!isOpen) resetForm();
+          <Button onClick={() => {
+            if (!editingOrder) {
+              const year = new Date().getFullYear();
+              const count = orders?.length || 0;
+              const nextNumber = `PED-${year}-${String(count + 1).padStart(3, '0')}`;
+              setFormData(prev => ({ ...prev, orderNumber: nextNumber }));
+            }
+            setShowForm(true);
           }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => {
-                if (!editingOrder) {
-                  const year = new Date().getFullYear();
-                  const count = orders?.length || 0;
-                  const nextNumber = `PED-${year}-${String(count + 1).padStart(3, '0')}`;
-                  setFormData(prev => ({ ...prev, orderNumber: nextNumber }));
-                }
-              }}>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Pedido
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[98vw] max-w-[1600px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingOrder ? "Editar Pedido" : "Novo Pedido"}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="orderNumber">Número do Pedido *</Label>
-                    <Input
-                      id="orderNumber"
-                      value={formData.orderNumber}
-                      onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                      required
-                      readOnly
-                      className="bg-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="customerId">Cliente *</Label>
-                    <Select
-                      value={formData.customerId}
-                      onValueChange={(value) => setFormData({ ...formData, customerId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers?.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id.toString()}>
-                            {customer.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-base">Itens do Pedido *</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Adicionar Item
-                    </Button>
-                  </div>
-
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-muted/50 text-sm font-semibold text-muted-foreground border-b">
-                      <div className="col-span-5">Produto</div>
-                      <div className="col-span-2 text-center">Quantidade</div>
-                      <div className="col-span-2 text-right">Preço Unit.</div>
-                      <div className="col-span-2 text-right">Subtotal</div>
-                      <div className="col-span-1"></div>
-                    </div>
-
-                    {formData.items.map((item, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-3 px-4 py-3 border-b last:border-b-0 items-center">
-                        <div className="col-span-5">
-                          <Select
-                            value={item.productId}
-                            onValueChange={(value) => updateItem(index, "productId", value)}
-                          >
-                            <SelectTrigger className="h-10">
-                              <SelectValue placeholder="Selecione um produto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {products?.map((product) => (
-                                <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            type="number"
-                            step="1"
-                            min="1"
-                            className="h-10 text-center"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            className="h-10 text-right"
-                            value={item.unitPrice}
-                            onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
-                          />
-                        </div>
-                        <div className="col-span-2 text-right font-semibold text-sm pr-2">
-                          {formatPrice(item.subtotal || "0")}
-                        </div>
-                        <div className="col-span-1 text-center">
-                          {formData.items.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => removeItem(index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-muted/50 border-t font-semibold">
-                      <div className="col-span-9 text-right">Total:</div>
-                      <div className="col-span-2 text-right text-lg">
-                        {formatPrice(calculateTotal())}
-                      </div>
-                      <div className="col-span-1"></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Custos Diretos */}
-                <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-3">Custos Diretos</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <Label>Horas de Trabalho</Label>
-                      <Input type="number" step="0.01" value={formData.laborHours} onChange={(e) => setFormData({ ...formData, laborHours: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Valor por Hora (R$)</Label>
-                      <Input type="number" step="0.01" value={formData.laborRate} onChange={(e) => setFormData({ ...formData, laborRate: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Mão de Obra Total (R$)</Label>
-                      <Input type="number" value={(formData.laborHours * formData.laborRate).toFixed(2)} disabled className="bg-muted" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Materiais (R$)</Label>
-                      <Input type="number" value={formData.materialCost} onChange={(e) => setFormData({ ...formData, materialCost: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Terceiros (R$)</Label>
-                      <Input type="number" value={formData.thirdPartyCost} onChange={(e) => setFormData({ ...formData, thirdPartyCost: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Outros Custos Diretos (R$)</Label>
-                      <Input type="number" value={formData.otherDirectCosts} onChange={(e) => setFormData({ ...formData, otherDirectCosts: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Custos Indiretos */}
-                <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-3">Custos Indiretos (Rateados)</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label>Total de Custos Indiretos (R$)</Label>
-                      <Input type="number" value={formData.indirectCostsTotal} onChange={(e) => setFormData({ ...formData, indirectCostsTotal: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Margem de Lucro (%)</Label>
-                      <Input type="number" step="0.1" value={formData.profitMargin} onChange={(e) => setFormData({ ...formData, profitMargin: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Imposto Simples Nacional */}
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">Imposto - Simples Nacional (Anexo III)</h3>
-                    <span className="text-xs text-muted-foreground">Alíquota padrão: 10%</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label>Alíquota Simples Nacional (%)</Label>
-                      <Input type="number" step="0.01" value={formData.simplesRate} onChange={(e) => setFormData({ ...formData, simplesRate: parseFloat(e.target.value) || 0 })} />
-                    </div>
-                    <div className="flex items-end">
-                      <p className="text-sm text-muted-foreground pb-2">
-                        Imposto estimado: <span className="font-semibold text-orange-600">{formatCurrency(calculated.simplesAmount)}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Demonstrativo Financeiro */}
-                <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-3">Demonstrativo Financeiro</h3>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <Card className="p-4 bg-gray-50">
-                      <p className="text-muted-foreground mb-1">Custos Totais</p>
-                      <p className="text-2xl font-bold">{formatCurrency(calculated.totalCosts)}</p>
-                    </Card>
-                    <Card className="p-4 bg-orange-50">
-                      <p className="text-muted-foreground mb-1">Simples Nacional ({formData.simplesRate}%)</p>
-                      <p className="text-2xl font-bold text-orange-600">{formatCurrency(calculated.simplesAmount)}</p>
-                    </Card>
-                    <Card className="p-4 bg-green-50">
-                      <p className="text-muted-foreground mb-1">Lucro Líquido</p>
-                      <p className="text-2xl font-bold text-green-600">{formatCurrency(calculated.netProfit)}</p>
-                    </Card>
-                  </div>
-
-                  <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Preço Final de Venda</p>
-                        <p className="text-3xl font-bold text-purple-600">{formatCurrency(calculated.finalPrice)}</p>
-                      </div>
-                      <DollarSign className="h-12 w-12 text-purple-400" />
-                    </div>
-                  </div>
-
-                  {/* Parcelas */}
-                  <div className="mt-4 p-4 bg-white border rounded-lg">
-                    <Label className="text-sm font-semibold mb-3 block">Condição de Pagamento</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { value: 1, label: "À Vista" },
-                        { value: 3, label: "3x" },
-                        { value: 6, label: "6x" },
-                        { value: 12, label: "12x" },
-                      ].map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, installments: option.value })}
-                          className={`p-3 rounded-lg border-2 text-center transition-all ${
-                            formData.installments === option.value
-                              ? "border-purple-500 bg-purple-50 text-purple-700 font-semibold"
-                              : "border-gray-200 hover:border-purple-300"
-                          }`}
-                        >
-                          <p className="text-sm font-medium">{option.label}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {option.value === 1
-                              ? formatCurrency(calculated.finalPrice)
-                              : `${option.value}x ${formatCurrency(calculated.finalPrice / option.value)}`}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Observações</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {editingOrder ? "Atualizar Pedido" : "Criar Pedido"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Pedido
+          </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Lista de Pedidos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Carregando pedidos...
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
+          <div className="lg:col-span-1 space-y-4">
+            {/* Estatísticas */}
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Estatísticas
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total</span>
+                  <span className="font-bold text-lg">{stats.total}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Pendentes</span>
+                  <span className="font-semibold text-yellow-600">{stats.pending}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Aprovados</span>
+                  <span className="font-semibold text-green-600">{stats.approved}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Em Produção</span>
+                  <span className="font-semibold text-blue-600">{stats.in_production}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Concluídos</span>
+                  <span className="font-semibold text-emerald-600">{stats.completed}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Cancelados</span>
+                  <span className="font-semibold text-red-600">{stats.cancelled}</span>
+                </div>
               </div>
-            ) : !orders || orders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum pedido cadastrado. Clique em "Novo Pedido" para começar.
+            </Card>
+
+            {/* Filtros */}
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filtrar por Status
+              </h3>
+              <div className="space-y-2">
+                {[
+                  { value: "all", label: `Todos (${stats.total})` },
+                  { value: "pending", label: `Pendentes (${stats.pending})` },
+                  { value: "approved", label: `Aprovados (${stats.approved})` },
+                  { value: "in_production", label: `Em Produção (${stats.in_production})` },
+                  { value: "completed", label: `Concluídos (${stats.completed})` },
+                  { value: "cancelled", label: `Cancelados (${stats.cancelled})` },
+                ].map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={statusFilter === opt.value ? "default" : "outline"}
+                    className="w-full justify-start"
+                    size="sm"
+                    onClick={() => setStatusFilter(opt.value)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Número</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((row) => (
-                      <TableRow key={row.order.id}>
-                        <TableCell className="font-medium">{row.order.orderNumber}</TableCell>
-                        <TableCell>{row.customer?.name || "-"}</TableCell>
-                        <TableCell>{formatDate(row.order.orderDate)}</TableCell>
-                        <TableCell>{formatPrice(row.order.totalAmount)}</TableCell>
-                        <TableCell>
-                          <Select
-                            value={row.order.status}
-                            onValueChange={(value: "pending" | "approved" | "in_production" | "completed" | "cancelled") => handleStatusChange(row.order.id, value)}
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue>
-                                <span className={`status-badge ${statusColors[row.order.status]}`}>
-                                  {statusMap[row.order.status]}
-                                </span>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(statusMap).map(([key, label]) => (
-                                <SelectItem key={key} value={key}>
-                                  {label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => window.open(`/orders/${row.order.id}/print`, '_blank')}
-                              title="Ver PDF"
+            </Card>
+          </div>
+
+          {/* Conteúdo Principal */}
+          <div className="lg:col-span-3 space-y-6">
+
+            {/* Formulário */}
+            {showForm && (
+              <Card className="p-6">
+                <h2 className="text-xl font-semibold mb-4">
+                  {editingOrder ? "Editar Pedido" : "Novo Pedido"}
+                </h2>
+
+                <div className="grid gap-4">
+                  {/* Informações Básicas */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Número do Pedido *</Label>
+                      <Input
+                        value={formData.orderNumber}
+                        readOnly
+                        className="bg-muted"
+                      />
+                    </div>
+                    <div>
+                      <Label>Cliente *</Label>
+                      <Select
+                        value={formData.customerId}
+                        onValueChange={(value) => setFormData({ ...formData, customerId: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers?.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Itens do Pedido */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold">Itens do Pedido *</h3>
+                      <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar Item
+                      </Button>
+                    </div>
+
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-muted/50 text-sm font-semibold text-muted-foreground border-b">
+                        <div className="col-span-5">Produto</div>
+                        <div className="col-span-2 text-center">Qtd</div>
+                        <div className="col-span-2 text-right">Preço Unit.</div>
+                        <div className="col-span-2 text-right">Subtotal</div>
+                        <div className="col-span-1"></div>
+                      </div>
+
+                      {formData.items.map((item, index) => (
+                        <div key={index} className="grid grid-cols-12 gap-3 px-4 py-3 border-b last:border-b-0 items-center">
+                          <div className="col-span-5">
+                            <Select
+                              value={item.productId}
+                              onValueChange={(value) => updateItem(index, "productId", value)}
                             >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => handleEdit(row)}
-                              title="Editar"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => {
-                                if (confirm('Tem certeza que deseja excluir este pedido?')) {
-                                  deleteMutation.mutate({ id: row.order.id });
-                                }
-                              }}
-                              title="Excluir"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <SelectTrigger className="h-10">
+                                <SelectValue placeholder="Selecione um produto" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products?.map((product) => (
+                                  <SelectItem key={product.id} value={product.id.toString()}>
+                                    {product.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                          <div className="col-span-2">
+                            <Input
+                              type="number"
+                              step="1"
+                              min="1"
+                              className="h-10 text-center"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              className="h-10 text-right"
+                              value={item.unitPrice}
+                              onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
+                            />
+                          </div>
+                          <div className="col-span-2 text-right font-semibold text-sm pr-2">
+                            {formatPrice(item.subtotal || "0")}
+                          </div>
+                          <div className="col-span-1 text-center">
+                            {formData.items.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => removeItem(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-muted/50 border-t font-semibold">
+                        <div className="col-span-9 text-right">Total dos Itens:</div>
+                        <div className="col-span-2 text-right text-lg">
+                          {formatPrice(calculateTotal())}
+                        </div>
+                        <div className="col-span-1"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Custos Diretos */}
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold mb-3">Custos Diretos</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Horas de Trabalho</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.laborHours}
+                          onChange={(e) => setFormData({ ...formData, laborHours: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ex: 40"
+                        />
+                      </div>
+                      <div>
+                        <Label>Valor por Hora (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.laborRate}
+                          onChange={(e) => setFormData({ ...formData, laborRate: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ex: 50.00"
+                        />
+                      </div>
+                      <div>
+                        <Label>Mão de Obra Total (R$)</Label>
+                        <Input
+                          type="number"
+                          value={(formData.laborHours * formData.laborRate).toFixed(2)}
+                          disabled
+                          className="bg-muted"
+                        />
+                      </div>
+                      <div>
+                        <Label>Materiais (R$)</Label>
+                        <Input
+                          type="number"
+                          value={formData.materialCost}
+                          onChange={(e) => setFormData({ ...formData, materialCost: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Terceiros (R$)</Label>
+                        <Input
+                          type="number"
+                          value={formData.thirdPartyCost}
+                          onChange={(e) => setFormData({ ...formData, thirdPartyCost: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Outros Custos Diretos (R$)</Label>
+                        <Input
+                          type="number"
+                          value={formData.otherDirectCosts}
+                          onChange={(e) => setFormData({ ...formData, otherDirectCosts: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Custos Indiretos */}
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold mb-3">Custos Indiretos (Rateados)</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Total de Custos Indiretos (R$)</Label>
+                        <Input
+                          type="number"
+                          value={formData.indirectCostsTotal}
+                          onChange={(e) => setFormData({ ...formData, indirectCostsTotal: parseFloat(e.target.value) || 0 })}
+                          placeholder="Aluguel, internet, sistemas, etc."
+                        />
+                      </div>
+                      <div>
+                        <Label>Margem de Lucro (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={formData.profitMargin}
+                          onChange={(e) => setFormData({ ...formData, profitMargin: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Alíquota Simples Nacional */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold">Imposto - Simples Nacional (Anexo III)</h3>
+                      <span className="text-xs text-muted-foreground">Alíquota padrão: 10%</span>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Alíquota Simples Nacional (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.simplesRate}
+                          onChange={(e) => setFormData({ ...formData, simplesRate: parseFloat(e.target.value) || 0 })}
+                          placeholder="Ex: 10"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <p className="text-sm text-muted-foreground pb-2">
+                          Imposto estimado: <span className="font-semibold text-orange-600">{formatCurrency(calculated.simplesAmount)}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Demonstrativo Financeiro */}
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold mb-3">Demonstrativo Financeiro</h3>
+                    <div className="grid md:grid-cols-3 gap-4 text-sm">
+                      <Card className="p-4 bg-gray-50 dark:bg-gray-900">
+                        <p className="text-muted-foreground mb-1">Custos Totais</p>
+                        <p className="text-2xl font-bold">{formatCurrency(calculated.totalCosts)}</p>
+                      </Card>
+                      <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
+                        <p className="text-muted-foreground mb-1">Simples Nacional ({formData.simplesRate}%)</p>
+                        <p className="text-2xl font-bold text-orange-600">{formatCurrency(calculated.simplesAmount)}</p>
+                      </Card>
+                      <Card className="p-4 bg-green-50 dark:bg-green-950/20">
+                        <p className="text-muted-foreground mb-1">Lucro Líquido</p>
+                        <p className="text-2xl font-bold text-green-600">{formatCurrency(calculated.netProfit)}</p>
+                      </Card>
+                    </div>
+
+                    <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Preço Final de Venda</p>
+                          <p className="text-3xl font-bold text-purple-600">{formatCurrency(calculated.finalPrice)}</p>
+                        </div>
+                        <DollarSign className="h-12 w-12 text-purple-400" />
+                      </div>
+                    </div>
+
+                    {/* Parcelas */}
+                    <div className="mt-4 p-4 bg-white dark:bg-gray-900 border rounded-lg">
+                      <Label className="text-sm font-semibold mb-3 block">Condição de Pagamento</Label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { value: 1, label: "À Vista" },
+                          { value: 3, label: "3x" },
+                          { value: 6, label: "6x" },
+                          { value: 12, label: "12x" },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, installments: option.value })}
+                            className={`p-3 rounded-lg border-2 text-center transition-all ${
+                              formData.installments === option.value
+                                ? "border-purple-500 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 font-semibold"
+                                : "border-gray-200 dark:border-gray-700 hover:border-purple-300"
+                            }`}
+                          >
+                            <p className="text-sm font-medium">{option.label}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {option.value === 1
+                                ? formatCurrency(calculated.finalPrice)
+                                : `${option.value}x ${formatCurrency(calculated.finalPrice / option.value)}`}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Detalhamento */}
+                    <details className="mt-4">
+                      <summary className="cursor-pointer font-semibold text-sm">
+                        Ver detalhamento completo
+                      </summary>
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Custos Diretos:</span>
+                          <span className="font-semibold">{formatCurrency(calculated.totalDirectCosts)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Custos Indiretos:</span>
+                          <span className="font-semibold">{formatCurrency(formData.indirectCostsTotal)}</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-2">
+                          <span>Custo Total:</span>
+                          <span className="font-semibold">{formatCurrency(calculated.totalCosts)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Valor Bruto (com margem {formData.profitMargin}%):</span>
+                          <span className="font-semibold">{formatCurrency(calculated.grossValue)}</span>
+                        </div>
+                        <div className="flex justify-between text-orange-600">
+                          <span>Simples Nacional ({formData.simplesRate}%):</span>
+                          <span className="font-semibold">-{formatCurrency(calculated.simplesAmount)}</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-2 text-green-600">
+                          <span className="font-semibold">Lucro Líquido Final:</span>
+                          <span className="font-bold">{formatCurrency(calculated.netProfit)}</span>
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+
+                  {/* Observações */}
+                  <div className="border-t pt-4">
+                    <Label>Observações</Label>
+                    <Textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Anotações internas"
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Botões */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={createMutation.isPending || updateMutation.isPending}
+                    >
+                      {editingOrder ? "Atualizar Pedido" : "Criar Pedido"}
+                    </Button>
+                    <Button variant="outline" onClick={resetForm}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+
+            {/* Lista de Pedidos */}
+            <div className="grid gap-4">
+              {filteredOrders?.map((row: any) => (
+                <Card key={row.order.id} className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-lg">{row.order.orderNumber}</h3>
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${statusColorMap[row.order.status] || "bg-gray-100 text-gray-800"}`}>
+                          {statusMap[row.order.status] || row.order.status}
+                        </span>
+                      </div>
+                      {row.customer && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Cliente: {row.customer.name}
+                        </p>
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        Data: {formatDate(row.order.orderDate)}
+                      </p>
+                      {row.order.notes && (
+                        <p className="text-sm text-muted-foreground mt-1 italic">
+                          {row.order.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-purple-600">
+                        {formatPrice(row.order.totalAmount)}
+                      </p>
+                      <div className="flex flex-row flex-wrap gap-2 mt-3 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(row)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`/orders/${row.order.id}/print`, '_blank')}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          PDF
+                        </Button>
+                        {row.order.status === "pending" && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => {
+                              if (confirm("Deseja aprovar este pedido?")) {
+                                updateStatusMutation.mutate({ id: row.order.id, status: "approved" });
+                              }
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Aprovar
+                          </Button>
+                        )}
+                        {row.order.status === "approved" && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={() => {
+                              if (confirm("Deseja iniciar a produção deste pedido?")) {
+                                updateStatusMutation.mutate({ id: row.order.id, status: "in_production" });
+                              }
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <Package className="h-4 w-4 mr-1" />
+                            Produção
+                          </Button>
+                        )}
+                        {row.order.status === "in_production" && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => {
+                              if (confirm("Deseja marcar este pedido como concluído?")) {
+                                updateStatusMutation.mutate({ id: row.order.id, status: "completed" });
+                              }
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Concluir
+                          </Button>
+                        )}
+                        {row.order.status !== "cancelled" && row.order.status !== "completed" && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm("Deseja cancelar este pedido?")) {
+                                updateStatusMutation.mutate({ id: row.order.id, status: "cancelled" });
+                              }
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Cancelar
+                          </Button>
+                        )}
+                        {(row.order.status === "cancelled") && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm("Tem certeza que deseja excluir este pedido?")) {
+                                deleteMutation.mutate({ id: row.order.id });
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Excluir
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              {filteredOrders?.length === 0 && !showForm && (
+                <Card className="p-12 text-center">
+                  <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    {statusFilter === "all"
+                      ? "Nenhum pedido cadastrado ainda."
+                      : "Nenhum pedido com este status."}
+                  </p>
+                  {statusFilter === "all" && (
+                    <Button className="mt-4" onClick={() => {
+                      const year = new Date().getFullYear();
+                      const count = orders?.length || 0;
+                      const nextNumber = `PED-${year}-${String(count + 1).padStart(3, '0')}`;
+                      setFormData(prev => ({ ...prev, orderNumber: nextNumber }));
+                      setShowForm(true);
+                    }}>
+                      Criar Primeiro Pedido
+                    </Button>
+                  )}
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );
