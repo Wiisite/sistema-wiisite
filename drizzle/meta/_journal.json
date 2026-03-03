@@ -225,6 +225,13 @@
       "when": 1771021635017,
       "tag": "0031_wandering_shriek",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1772542595026,
+      "tag": "0032_little_alex_power",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Calendar, CheckCircle2, CheckSquare, Clock, GripVertical, ListTodo, Plus, Edit2, Trash2, X } from "lucide-react";
+import { AlertCircle, Calendar, CheckCircle2, CheckSquare, Clock, GripVertical, ListTodo, Plus, Edit2, Trash2, X, StickyNote } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
@@ -95,9 +95,18 @@ function TaskCard({ item, onEdit, onDelete, onOpenChecklist, isDragging }: TaskC
                   {item.task.priority === "high" && "Alta"}
                   {item.task.priority === "urgent" && "Urgente"}
                 </span>
+                {item.task.startDate && (
+                  <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                    <Calendar className="h-3 w-3 text-blue-500" />
+                    {new Date(item.task.startDate).toLocaleDateString("pt-BR")}
+                  </span>
+                )}
+                {(item.task.startDate && item.task.dueDate) && (
+                  <span className="text-xs text-muted-foreground">→</span>
+                )}
                 {item.task.dueDate && (
                   <span className="text-xs flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
+                    <Calendar className="h-3 w-3 text-red-500" />
                     {new Date(item.task.dueDate).toLocaleDateString("pt-BR")}
                   </span>
                 )}
@@ -141,6 +150,14 @@ function TaskCard({ item, onEdit, onDelete, onOpenChecklist, isDragging }: TaskC
                 </Button>
               </div>
             </div>
+            {item.task.notes && (
+              <div className="mt-1 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-800 dark:text-yellow-300">
+                <div className="flex items-start gap-1">
+                  <StickyNote className="h-3 w-3 mt-0.5 shrink-0" />
+                  <p className="line-clamp-3 whitespace-pre-line">{item.task.notes}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -177,7 +194,9 @@ export default function Tasks() {
     title: "",
     description: "",
     priority: "medium" as TaskPriority,
+    startDate: "",
     dueDate: "",
+    notes: "",
   });
 
   const sensors = useSensors(
@@ -195,7 +214,7 @@ export default function Tasks() {
       toast.success("Tarefa criada com sucesso!");
       refetch();
       setIsDialogOpen(false);
-      setFormData({ title: "", description: "", priority: "medium", dueDate: "" });
+      setFormData({ title: "", description: "", priority: "medium", startDate: "", dueDate: "", notes: "" });
     },
     onError: (error) => {
       toast.error(`Erro ao criar tarefa: ${error.message}`);
@@ -272,6 +291,11 @@ export default function Tasks() {
     }
 
     // Corrigir problema de timezone - criar data com hora meio-dia para evitar mudança de dia
+    let startDate: Date | undefined;
+    if (formData.startDate) {
+      const [year, month, day] = formData.startDate.split('-').map(Number);
+      startDate = new Date(year, month - 1, day, 12, 0, 0);
+    }
     let dueDate: Date | undefined;
     if (formData.dueDate) {
       const [year, month, day] = formData.dueDate.split('-').map(Number);
@@ -285,18 +309,22 @@ export default function Tasks() {
           title: formData.title,
           description: formData.description || undefined,
           priority: formData.priority,
+          startDate,
           dueDate,
+          notes: formData.notes || undefined,
         },
       });
       setIsDialogOpen(false);
-      setFormData({ title: "", description: "", priority: "medium", dueDate: "" });
+      setFormData({ title: "", description: "", priority: "medium", startDate: "", dueDate: "", notes: "" });
       setEditingTask(null);
     } else {
       createMutation.mutate({
         title: formData.title,
         description: formData.description || undefined,
         priority: formData.priority,
+        startDate,
         dueDate,
+        notes: formData.notes || undefined,
       });
     }
   };
@@ -307,7 +335,9 @@ export default function Tasks() {
       title: task.title || "",
       description: task.description || "",
       priority: task.priority || "medium",
+      startDate: task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : "",
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "",
+      notes: task.notes || "",
     });
     setIsDialogOpen(true);
   };
@@ -429,17 +459,38 @@ export default function Tasks() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startDate">Data Inicial</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dueDate">Data Final</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={formData.dueDate}
+                      onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                    />
+                  </div>
+                </div>
                 <div>
-                  <Label htmlFor="dueDate">Data de Vencimento</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                  <Label htmlFor="notes">Bloco de Notas</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Anotações da tarefa..."
+                    rows={3}
                   />
                 </div>
-                <Button onClick={handleCreate} className="w-full" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Criando..." : "Criar Tarefa"}
+                <Button onClick={handleCreate} className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {editingTask ? (updateMutation.isPending ? "Atualizando..." : "Atualizar Tarefa") : (createMutation.isPending ? "Criando..." : "Criar Tarefa")}
                 </Button>
               </div>
             </DialogContent>

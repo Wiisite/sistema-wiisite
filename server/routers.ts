@@ -783,7 +783,9 @@ export const appRouter = router({
         assignedTo: z.number().optional(),
         priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
         estimatedHours: z.string().optional(),
+        startDate: z.date().optional(),
         dueDate: z.date().optional(),
+        notes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         return await db.createTask({ ...input, status: "todo", createdBy: ctx.user.id });
@@ -797,8 +799,10 @@ export const appRouter = router({
           status: z.enum(["todo", "in_progress", "review", "done", "cancelled"]).optional(),
           priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
           assignedTo: z.number().optional(),
+          startDate: z.date().optional(),
           dueDate: z.date().optional(),
           completedDate: z.date().optional(),
+          notes: z.string().optional(),
         }),
       }))
       .mutation(async ({ input }) => {
