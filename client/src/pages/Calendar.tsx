@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { ChevronLeft, ChevronRight, Edit2, MapPin, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Edit2, ExternalLink, MapPin, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +29,63 @@ const eventTypeMap = {
   call: "Ligação",
   other: "Outro",
 };
+
+// Formatar data para Google Calendar (YYYYMMDDTHHmmss)
+function formatDateForGoogle(date: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+}
+
+// Gerar link do Google Calendar
+function getGoogleCalendarUrl(event: any): string {
+  const start = new Date(event.startDate);
+  const end = new Date(event.endDate);
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title || '',
+    dates: `${formatDateForGoogle(start)}/${formatDateForGoogle(end)}`,
+    details: event.description || '',
+    location: event.location || '',
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+// Gerar conteúdo .ics
+function generateICS(event: any): string {
+  const start = new Date(event.startDate);
+  const end = new Date(event.endDate);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const fmtDate = (d: Date) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const now = fmtDate(new Date());
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//ERP System//PT',
+    'BEGIN:VEVENT',
+    `DTSTART:${fmtDate(start)}`,
+    `DTEND:${fmtDate(end)}`,
+    `SUMMARY:${event.title || ''}`,
+    `DESCRIPTION:${(event.description || '').replace(/\n/g, '\\n')}`,
+    `LOCATION:${event.location || ''}`,
+    `DTSTAMP:${now}`,
+    `UID:${event.id}-${now}@erp-system`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+}
+
+// Baixar arquivo .ics
+function downloadICS(event: any) {
+  const content = generateICS(event);
+  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${(event.title || 'evento').replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const eventTypeColors: Record<string, string> = {
   meeting: "bg-blue-500",
@@ -626,19 +683,41 @@ export default function CalendarPage() {
                       </div>
                     </div>
                     
-                    {event.type === 'event' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setViewEventOpen(false);
-                          handleEdit(event);
-                        }}
-                      >
-                        <Edit2 className="h-3 w-3 mr-1" />
-                        Editar
-                      </Button>
-                    )}
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {event.type === 'event' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setViewEventOpen(false);
+                              handleEdit(event);
+                            }}
+                          >
+                            <Edit2 className="h-3 w-3 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950"
+                            onClick={() => window.open(getGoogleCalendarUrl(event), '_blank')}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            Google
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950"
+                            onClick={() => downloadICS(event)}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            .ics
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
