@@ -232,6 +232,13 @@
       "when": 1772542595026,
       "tag": "0032_little_alex_power",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1774612527249,
+      "tag": "0033_perpetual_mole_man",
+      "breakpoints": true
     }
   ]
 }

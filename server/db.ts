@@ -72,7 +72,9 @@ import {
   RecurringExpenseStatus,
   RecurringExpenseCategory,
   SubscriptionStatus,
-  BudgetStatus
+  BudgetStatus,
+  stickyNotes,
+  InsertStickyNote,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -2530,4 +2532,39 @@ export async function clearAllData() {
   await db.delete(projects);
   await db.execute(sql`SET FOREIGN_KEY_CHECKS = 1`);
   return { success: true };
+}
+
+// ============ STICKY NOTES ============
+
+export async function getStickyNotes(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.select().from(stickyNotes)
+    .where(eq(stickyNotes.createdBy, userId))
+    .orderBy(desc(stickyNotes.updatedAt));
+}
+
+export async function createStickyNote(data: InsertStickyNote) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(stickyNotes).values(data);
+  return result;
+}
+
+export async function updateStickyNote(id: number, userId: number, data: Partial<InsertStickyNote>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.update(stickyNotes).set(data)
+    .where(and(eq(stickyNotes.id, id), eq(stickyNotes.createdBy, userId)));
+}
+
+export async function deleteStickyNote(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.delete(stickyNotes)
+    .where(and(eq(stickyNotes.id, id), eq(stickyNotes.createdBy, userId)));
 }

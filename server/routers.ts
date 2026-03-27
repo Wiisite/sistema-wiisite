@@ -1486,6 +1486,37 @@ export const appRouter = router({
       }),
   }),
 
+  // ============ STICKY NOTES ============
+  stickyNotes: router({
+    list: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getStickyNotes(ctx.user.id);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        content: z.string().min(1),
+        color: z.string().default("yellow"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.createStickyNote({ ...input, createdBy: ctx.user.id });
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        content: z.string().optional(),
+        color: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { id, ...data } = input;
+        return await db.updateStickyNote(id, ctx.user.id, data);
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.deleteStickyNote(input.id, ctx.user.id);
+      }),
+  }),
+
   admin: router({
     clearAllData: protectedProcedure
       .mutation(async () => {

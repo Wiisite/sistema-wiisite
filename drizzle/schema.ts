@@ -697,3 +697,18 @@ export type RecurringExpenseStatus = "active" | "paused" | "cancelled";
 export type RecurringExpenseCategory = string;
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
 export type BudgetStatus = "draft" | "sent" | "approved" | "rejected" | "converted";
+
+/**
+ * Sticky Notes table for quick notes accessible from anywhere
+ */
+export const stickyNotes = mysqlTable("sticky_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  content: text("content").notNull(),
+  color: varchar("color", { length: 20 }).default("yellow").notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StickyNote = typeof stickyNotes.$inferSelect;
+export type InsertStickyNote = typeof stickyNotes.$inferInsert;
