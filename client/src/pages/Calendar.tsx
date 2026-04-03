@@ -22,6 +22,17 @@ import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, Download, Edit2, ExternalLink, MapPin, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 const eventTypeMap = {
   meeting: "Reunião",
@@ -98,6 +109,62 @@ const eventTypeColors: Record<string, string> = {
   recurring: "bg-orange-500",
 };
 
+function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: any) => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `${event.type}-${event.id}`,
+    data: { event },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : 1,
+  };
+
+  const eventColor = eventTypeColors[event.type] || eventTypeColors[event.eventType] || "bg-gray-500";
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all ${eventColor} touch-none`}
+      onClick={onClick}
+    >
+      {event.type === 'event' && new Date(event.startDate).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}{" "}
+      {event.title}
+    </div>
+  );
+}
+
+function DroppableCalendarDay({ date, children, isToday, isCurrentMonth, onClick }: any) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: date.toISOString(),
+    data: { date },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-h-[120px] p-2 border rounded-lg cursor-pointer transition-colors relative ${
+        !isCurrentMonth ? "bg-muted/30" : ""
+      } ${isToday ? "border-primary border-2" : ""} ${isOver ? "bg-primary/20 ring-2 ring-primary z-10" : "hover:bg-accent/50"}`}
+      onClick={onClick}
+    >
+      <div className={`text-sm font-medium mb-1 ${!isCurrentMonth ? "text-muted-foreground" : ""}`}>
+        {date.getDate()}
+      </div>
+      <div className="space-y-1 relative z-0">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [open, setOpen] = useState(false);
@@ -145,7 +212,7 @@ export default function CalendarPage() {
   // Buscar tarefas do projeto selecionado
   const { data: projectTasks } = trpc.tasks.list.useQuery(
     { projectId: filterProjectId !== "all" ? parseInt(filterProjectId) : undefined },
-    { enabled: filterProjectId !== "all" }
+    { enabled: true }
   );
 
   const createMutation = trpc.calendar.create.useMutation({
@@ -169,6 +236,36 @@ export default function CalendarPage() {
     },
     onError: (error) => {
       toast.error("Erro ao atualizar evento: " + error.message);
+    },
+  });
+
+  const updateTaskMutation = trpc.tasks.update.useMutation({
+    onSuccess: () => {
+      toast.success("Tarefa movida com sucesso!");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("Erro ao mover tarefa: " + error.message);
+    },
+  });
+
+  const updatePayableMutation = trpc.accountsPayable.update.useMutation({
+    onSuccess: () => {
+      toast.success("Vencimento atualizado!");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("Erro ao mover conta: " + error.message);
+    },
+  });
+
+  const updateReceivableMutation = trpc.accountsReceivable.update.useMutation({
+    onSuccess: () => {
+      toast.success("Vencimento atualizado!");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("Erro ao mover conta: " + error.message);
     },
   });
 
@@ -287,6 +384,67 @@ export default function CalendarPage() {
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const [activeItem, setActiveItem] = useState<any>(null);
+
+  const handleDragStart = (event: any) => {
+    const { active } = event;
+    setActiveItem(active.data.current.event);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveItem(null);
+
+    if (!over) return;
+
+    const item = active.data.current.event;
+    const newDate = new Date(over.data.current.date);
+
+    if (item.type === 'event') {
+      const oldStart = new Date(item.startDate);
+      const oldEnd = new Date(item.endDate);
+      const diff = oldEnd.getTime() - oldStart.getTime();
+      
+      const newStart = new Date(newDate);
+      newStart.setHours(oldStart.getHours(), oldStart.getMinutes());
+      
+      const newEnd = new Date(newStart.getTime() + diff);
+      
+      updateMutation.mutate({
+        id: item.id,
+        data: {
+          startDate: newStart,
+          endDate: newEnd,
+        }
+      });
+    } else if (item.type === 'task') {
+      updateTaskMutation.mutate({
+        id: item.id,
+        data: {
+          dueDate: newDate
+        }
+      });
+    } else if (item.type === 'payable') {
+      updatePayableMutation.mutate({
+        id: item.id,
+        dueDate: newDate
+      });
+    } else if (item.type === 'receivable') {
+      updateReceivableMutation.mutate({
+        id: item.id,
+        dueDate: newDate
+      });
+    }
+  };
+
   const calendarDays = useMemo(() => {
     const days = [];
     const current = new Date(startDate);
@@ -316,30 +474,74 @@ export default function CalendarPage() {
         }
         
         return dateMatches;
-      });
+      }).map((event: any) => ({ ...event, type: 'event' }));
       result.push(...filteredEvents);
     }
     
-    // Adicionar tarefas do projeto selecionado
-    if (filterProjectId !== "all" && projectTasks) {
+    // Adicionar tarefas
+    if (projectTasks) {
       const tasksForDate = projectTasks.filter((item: any) => {
         if (!item.task.dueDate) return false;
         const taskDate = new Date(item.task.dueDate);
-        return (
+        const matchesDate = 
           taskDate.getDate() === date.getDate() &&
           taskDate.getMonth() === date.getMonth() &&
-          taskDate.getFullYear() === date.getFullYear()
-        );
+          taskDate.getFullYear() === date.getFullYear();
+
+        if (filterProjectId !== "all") {
+          return matchesDate && item.task.projectId === parseInt(filterProjectId);
+        }
+        return matchesDate;
       }).map((item: any) => ({
-        id: `task-${item.task.id}`,
+        id: item.task.id,
         title: `[Tarefa] ${item.task.title}`,
         startDate: item.task.dueDate,
-        eventType: 'task',
-        isTask: true,
-        taskStatus: item.task.status,
-        taskPriority: item.task.priority,
+        type: 'task',
+        status: item.task.status,
+        priority: item.task.priority,
+        originalTask: item,
       }));
       result.push(...tasksForDate);
+    }
+
+    // Adicionar financeiro (Payables)
+    if (financialAlerts?.payables) {
+      const payablesForDate = financialAlerts.payables.filter((item: any) => {
+        const itemDate = new Date(item.accountPayable.dueDate);
+        return (
+          itemDate.getDate() === date.getDate() &&
+          itemDate.getMonth() === date.getMonth() &&
+          itemDate.getFullYear() === date.getFullYear()
+        );
+      }).map((item: any) => ({
+        id: item.accountPayable.id,
+        title: `💰 ${item.supplier?.name || 'Despesa'}`,
+        startDate: item.accountPayable.dueDate,
+        amount: item.accountPayable.amount,
+        type: 'payable',
+        originalItem: item,
+      }));
+      result.push(...payablesForDate);
+    }
+
+    // Adicionar financeiro (Receivables)
+    if (financialAlerts?.receivables) {
+      const receivablesForDate = financialAlerts.receivables.filter((item: any) => {
+        const itemDate = new Date(item.accountReceivable.dueDate);
+        return (
+          itemDate.getDate() === date.getDate() &&
+          itemDate.getMonth() === date.getMonth() &&
+          itemDate.getFullYear() === date.getFullYear()
+        );
+      }).map((item: any) => ({
+        id: item.accountReceivable.id,
+        title: `💵 ${item.customer?.name || 'Receita'}`,
+        startDate: item.accountReceivable.dueDate,
+        amount: item.accountReceivable.amount,
+        type: 'receivable',
+        originalItem: item,
+      }));
+      result.push(...receivablesForDate);
     }
     
     return result;
@@ -562,55 +764,46 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
-              <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
-                {day}
-              </div>
-            ))}
-            {calendarDays.map((date, index) => {
-              const isCurrentMonth = date.getMonth() === month;
-              const isToday =
-                date.getDate() === new Date().getDate() &&
-                date.getMonth() === new Date().getMonth() &&
-                date.getFullYear() === new Date().getFullYear();
-              const dayEvents = getEventsForDate(date);
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-7 gap-2">
+              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
+                <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
+                  {day}
+                </div>
+              ))}
+              {calendarDays.map((date, index) => {
+                const isCurrentMonth = date.getMonth() === month;
+                const isToday =
+                  date.getDate() === new Date().getDate() &&
+                  date.getMonth() === new Date().getMonth() &&
+                  date.getFullYear() === new Date().getFullYear();
+                const dayEvents = getEventsForDate(date);
 
-              return (
-                <div
-                  key={index}
-                  className={`min-h-[100px] p-2 border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors ${
-                    !isCurrentMonth ? "bg-muted/30" : ""
-                  } ${isToday ? "border-primary border-2" : ""}`}
-                  onClick={() => handleDateClick(date)}
-                >
-                  <div className={`text-sm font-medium mb-1 ${!isCurrentMonth ? "text-muted-foreground" : ""}`}>
-                    {date.getDate()}
-                  </div>
-                  <div className="space-y-1">
-                    {dayEvents.slice(0, 2).map((event: any) => {
-                      const eventColor = eventTypeColors[event.type] || eventTypeColors[event.eventType] || "bg-gray-500";
-                      
-                      return (
-                        <div
-                          key={event.id}
-                          className={`text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-80 ${eventColor}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedEvent(event);
-                            setViewDate(date);
-                            setViewEventOpen(true);
-                          }}
-                        >
-                          {event.type === 'event' && new Date(event.startDate).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          {event.title}
-                        </div>
-                      );
-                    })}
-                    {dayEvents.length > 2 && (
+                return (
+                  <DroppableCalendarDay
+                    key={index}
+                    date={date}
+                    isToday={isToday}
+                    isCurrentMonth={isCurrentMonth}
+                    onClick={() => handleDateClick(date)}
+                  >
+                    {dayEvents.slice(0, 3).map((event: any) => (
+                      <DraggableCalendarItem
+                        key={`${event.type}-${event.id}`}
+                        event={event}
+                        onClick={(e: any) => {
+                          e.stopPropagation();
+                          setSelectedEvent(event);
+                          setViewDate(date);
+                          setViewEventOpen(true);
+                        }}
+                      />
+                    ))}
+                    {dayEvents.length > 3 && (
                       <div 
                         className="text-xs text-muted-foreground px-2 cursor-pointer hover:text-primary"
                         onClick={(e) => {
@@ -620,14 +813,22 @@ export default function CalendarPage() {
                           setSelectedEvent(null);
                         }}
                       >
-                        +{dayEvents.length - 2} mais
+                        +{dayEvents.length - 3} mais
                       </div>
                     )}
-                  </div>
+                  </DroppableCalendarDay>
+                );
+              })}
+            </div>
+            
+            <DragOverlay>
+              {activeItem ? (
+                <div className={`text-xs px-2 py-1 rounded text-white truncate shadow-lg ${eventTypeColors[activeItem.type] || 'bg-gray-500'}`}>
+                  {activeItem.title}
                 </div>
-              );
-            })}
-          </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </Card>
       </div>
 
