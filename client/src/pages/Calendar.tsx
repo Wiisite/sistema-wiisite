@@ -171,6 +171,7 @@ function DroppableCalendarDay({ date, children, isToday, isCurrentMonth, onClick
 }
 
 export default function CalendarPage() {
+  const utils = trpc.useUtils();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -223,7 +224,7 @@ export default function CalendarPage() {
   const createMutation = trpc.calendar.create.useMutation({
     onSuccess: () => {
       toast.success("Evento criado com sucesso!");
-      refetch();
+      utils.calendar.events.invalidate();
       setOpen(false);
       resetForm();
     },
@@ -235,7 +236,7 @@ export default function CalendarPage() {
   const updateMutation = trpc.calendar.update.useMutation({
     onSuccess: () => {
       toast.success("Evento atualizado com sucesso!");
-      refetch();
+      utils.calendar.events.invalidate();
       setOpen(false);
       resetForm();
     },
@@ -247,7 +248,7 @@ export default function CalendarPage() {
   const updateTaskMutation = trpc.tasks.update.useMutation({
     onSuccess: () => {
       toast.success("Tarefa movida com sucesso!");
-      refetch();
+      utils.tasks.list.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao mover tarefa: " + error.message);
@@ -257,7 +258,7 @@ export default function CalendarPage() {
   const updatePayableMutation = trpc.accountsPayable.update.useMutation({
     onSuccess: () => {
       toast.success("Vencimento atualizado!");
-      refetch();
+      utils.calendar.financialAlerts.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao mover conta: " + error.message);
@@ -267,7 +268,7 @@ export default function CalendarPage() {
   const updateReceivableMutation = trpc.accountsReceivable.update.useMutation({
     onSuccess: () => {
       toast.success("Vencimento atualizado!");
-      refetch();
+      utils.calendar.financialAlerts.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao mover conta: " + error.message);
@@ -277,7 +278,7 @@ export default function CalendarPage() {
   const deleteMutation = trpc.calendar.delete.useMutation({
     onSuccess: () => {
       toast.success("Evento excluído com sucesso!");
-      refetch();
+      utils.calendar.events.invalidate();
       setOpen(false);
       resetForm();
     },
