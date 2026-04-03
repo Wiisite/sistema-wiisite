@@ -27,10 +27,13 @@ import {
   DragEndEvent,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   useDraggable,
   useDroppable,
+  closestCorners,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -142,8 +145,10 @@ function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: an
 }
 
 function DroppableCalendarDay({ date, children, isToday, isCurrentMonth, onClick }: any) {
+  const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+  
   const { setNodeRef, isOver } = useDroppable({
-    id: date.toISOString(),
+    id: dateKey,
     data: { date },
   });
 
@@ -387,9 +392,16 @@ export default function CalendarPage() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 3,
       },
-    })
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor)
   );
 
   const [activeItem, setActiveItem] = useState<any>(null);
@@ -766,6 +778,7 @@ export default function CalendarPage() {
 
           <DndContext
             sensors={sensors}
+            collisionDetection={closestCorners}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
