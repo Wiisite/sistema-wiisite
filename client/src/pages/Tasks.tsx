@@ -22,6 +22,9 @@ import {
   DragOverEvent,
   PointerSensor,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision,
   useSensor,
   useSensors,
   useDroppable,
@@ -416,13 +419,29 @@ export default function Tasks() {
     const item = (tasks || []).find((t) => t.task.id === (typeof id === 'string' ? parseInt(id) : id));
     if (item) return item.task.status as TaskStatus;
 
-    // Tentar encontrar pelo map de status se não for status direto nem tarefa ID
-    // Isso ajuda quando o overId é o SortableContext ou DroppableColumn
-    for (const status of validStatuses) {
-      if (status === id) return status as TaskStatus;
+    return null;
+  };
+
+  /**
+   * Custom collision detection strategy
+   * Prioritize containers and pointer location for Kanban boards
+   */
+  const collisionDetectionStrategy = (args: any) => {
+    // Primeiro tentar encontrar uma colisão direta pelo ponteiro (melhor para o mouse)
+    const pointerIntersections = pointerWithin(args);
+    const intersections = pointerIntersections.length > 0 
+      ? pointerIntersections 
+      : rectIntersection(args);
+    
+    let overId = getFirstCollision(intersections, "id");
+
+    if (overId != null) {
+      const container = findContainer(overId);
+      if (container) return [{ id: container }];
     }
 
-    return null;
+    // Fallback para o centro mais próximo
+    return closestCenter(args);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -587,7 +606,7 @@ export default function Tasks() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={collisionDetectionStrategy}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
