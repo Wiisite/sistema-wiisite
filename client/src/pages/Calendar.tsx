@@ -101,6 +101,24 @@ function downloadICS(event: any) {
   URL.revokeObjectURL(url);
 }
 
+// Helper para normalizar IDs (ex: "task-123" -> 123)
+function normalizeId(id: string | number): number {
+  if (typeof id === 'number') return id;
+  const parts = id.split('-');
+  const lastPart = parts[parts.length - 1];
+  return parseInt(lastPart) || 0;
+}
+
+// Helper para converter data para ISO com segurança
+function safeDateISO(date: any): string {
+  try {
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0];
+  } catch (e) {
+    return "";
+  }
+}
+
 const eventTypeColors: Record<string, string> = {
   meeting: "bg-blue-500",
   visit: "bg-green-500",
@@ -114,7 +132,7 @@ const eventTypeColors: Record<string, string> = {
 
 function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: any) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `${event.type}-${event.id}`,
+    id: `${event?.type || 'event'}-${event?.id || '0'}`,
     data: { event },
   });
 
@@ -124,7 +142,7 @@ function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: an
     zIndex: isDragging ? 100 : 1,
   };
 
-  const eventColor = eventTypeColors[event.type] || eventTypeColors[event.eventType] || "bg-gray-500";
+  const eventColor = eventTypeColors[event?.type] || eventTypeColors[event?.eventType] || "bg-gray-500";
 
   return (
     <div
@@ -135,11 +153,15 @@ function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: an
       className={`text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all ${eventColor} touch-none`}
       onClick={onClick}
     >
-      {event.type === 'event' && new Date(event.startDate).toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}{" "}
-      {event.title}
+      {event?.type === 'event' && event?.startDate && (
+        <span className="mr-1">
+          {new Date(event.startDate).toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      )}
+      {event?.title || 'Sem título'}
     </div>
   );
 }
@@ -422,7 +444,7 @@ export default function CalendarPage() {
       const newEnd = new Date(newStart.getTime() + diff);
       
       updateMutation.mutate({
-        id: Number(item.id),
+        id: normalizeId(item.id),
         data: {
           startDate: newStart,
           endDate: newEnd,
@@ -430,19 +452,19 @@ export default function CalendarPage() {
       });
     } else if (item.type === 'task') {
       updateTaskMutation.mutate({
-        id: Number(item.id),
+        id: normalizeId(item.id),
         data: {
           dueDate: newDate
         }
       });
     } else if (item.type === 'payable') {
       updatePayableMutation.mutate({
-        id: Number(item.id),
+        id: normalizeId(item.id),
         dueDate: newDate
       });
     } else if (item.type === 'receivable') {
       updateReceivableMutation.mutate({
-        id: Number(item.id),
+        id: normalizeId(item.id),
         dueDate: newDate
       });
     }
@@ -505,7 +527,7 @@ export default function CalendarPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Projetos</SelectItem>
-                {projects?.map((item: any) => (
+                {projects?.filter(item => item?.project?.id)?.map((item: any) => (
                   <SelectItem key={item.project.id} value={item.project.id.toString()}>
                     {item.project.name}
                   </SelectItem>
@@ -581,7 +603,7 @@ export default function CalendarPage() {
                     <Input
                       id="eventDate"
                       type="date"
-                      value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                      value={safeDateISO(selectedDate)}
                       onChange={(e) => {
                         if (e.target.value) {
                           const [year, month, day] = e.target.value.split('-').map(Number);
@@ -639,7 +661,7 @@ export default function CalendarPage() {
                         <SelectValue placeholder="Selecione um projeto" />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects?.map((row) => (
+                        {projects?.filter(row => row?.project?.id)?.map((row) => (
                           <SelectItem key={row.project.id} value={row.project.id.toString()}>
                             {row.project.name}
                           </SelectItem>
@@ -750,8 +772,8 @@ export default function CalendarPage() {
             
             <DragOverlay>
               {activeItem ? (
-                <div className={`text-xs px-2 py-1 rounded text-white truncate shadow-lg ${eventTypeColors[activeItem.type] || 'bg-gray-500'}`}>
-                  {activeItem.title}
+                <div className={`text-xs px-2 py-1 rounded text-white truncate shadow-lg ${activeItem?.type ? (eventTypeColors[activeItem.type] || 'bg-gray-500') : 'bg-gray-500'}`}>
+                  {activeItem?.title || 'Sem título'}
                 </div>
               ) : null}
             </DragOverlay>

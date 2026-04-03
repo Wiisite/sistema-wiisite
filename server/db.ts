@@ -964,23 +964,26 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
 
   // Consolidar todos os eventos
   const allEvents: any[] = [];
+  console.log(`[Calendar] Starting consolidation. Input counts: events=${events.length}, tasks=${tasksData.length}, payables=${payables.length}, receivables=${receivables.length}`);
 
   // Adicionar eventos do calendário
   events.forEach(e => {
-    allEvents.push({
-      type: 'event',
-      id: e.event.id,
-      title: e.event.title,
-      description: e.event.description,
-      startDate: e.event.startDate,
-      endDate: e.event.endDate,
-      eventType: e.event.eventType,
-      customerId: e.event.customerId,
-      projectId: e.event.projectId,
-      customer: e.customer,
-      project: e.project,
-      location: e.event.location,
-    });
+    if (e.event) {
+      allEvents.push({
+        type: 'event',
+        id: e.event.id,
+        title: e.event.title,
+        description: e.event.description,
+        startDate: e.event.startDate,
+        endDate: e.event.endDate,
+        eventType: e.event.eventType,
+        customerId: e.event.customerId,
+        projectId: e.event.projectId,
+        customer: e.customer,
+        project: e.project,
+        location: e.event.location,
+      });
+    }
   });
 
   // Adicionar tarefas
@@ -1002,34 +1005,38 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
 
   // Adicionar contas a pagar
   payables.forEach(p => {
-    allEvents.push({
-      type: 'payable',
-      id: `payable-${p.payable.id}`,
-      title: `[A Pagar] ${p.supplier?.name || 'Fornecedor'} - ${p.category?.name || ''}`,
-      description: p.payable.description,
-      startDate: p.payable.dueDate,
-      endDate: p.payable.dueDate,
-      amount: p.payable.amount,
-      status: p.payable.status,
-      supplier: p.supplier,
-      category: p.category,
-    });
+    if (p.payable.dueDate) {
+      allEvents.push({
+        type: 'payable',
+        id: `payable-${p.payable.id}`,
+        title: `[A Pagar] ${p.supplier?.name || 'Fornecedor'} - ${p.category?.name || ''}`,
+        description: p.payable.description,
+        startDate: p.payable.dueDate,
+        endDate: p.payable.dueDate,
+        amount: p.payable.amount,
+        status: p.payable.status,
+        supplier: p.supplier,
+        category: p.category,
+      });
+    }
   });
 
   // Adicionar contas a receber
   receivables.forEach(r => {
-    allEvents.push({
-      type: 'receivable',
-      id: `receivable-${r.receivable.id}`,
-      title: `[A Receber] ${r.customer?.name || 'Cliente'}`,
-      description: r.receivable.description,
-      startDate: r.receivable.dueDate,
-      endDate: r.receivable.dueDate,
-      amount: r.receivable.amount,
-      status: r.receivable.status,
-      customer: r.customer,
-      order: r.order,
-    });
+    if (r.receivable.dueDate) {
+      allEvents.push({
+        type: 'receivable',
+        id: `receivable-${r.receivable.id}`,
+        title: `[A Receber] ${r.customer?.name || 'Cliente'}`,
+        description: r.receivable.description,
+        startDate: r.receivable.dueDate,
+        endDate: r.receivable.dueDate,
+        amount: r.receivable.amount,
+        status: r.receivable.status,
+        customer: r.customer,
+        order: r.order,
+      });
+    }
   });
 
   // Adicionar despesas recorrentes (gerar eventos para os próximos meses)
@@ -1049,31 +1056,40 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
         const monthEnd = year === endYear ? endMonth : 11;
 
         for (let month = monthStart; month <= monthEnd; month++) {
-          const dayOfMonth = typeof re.expense.dayOfMonth === 'string' ? parseInt(re.expense.dayOfMonth) : re.expense.dayOfMonth;
-          const eventDate = new Date(year, month, dayOfMonth);
+          const dayOfMonthRaw = re.expense.dayOfMonth;
+          const dayOfMonth = typeof dayOfMonthRaw === 'string' ? parseInt(dayOfMonthRaw) : dayOfMonthRaw;
+          
+          if (!isNaN(dayOfMonth)) {
+            const eventDate = new Date(year, month, dayOfMonth);
 
-          // Verificar se a data está no período
-          if (eventDate >= filters.startDate! && eventDate <= filters.endDate!) {
-            allEvents.push({
-              type: 'recurring',
-              id: `recurring-${re.expense.id}-${year}-${month}`,
-              title: `[Despesa Recorrente] ${re.expense.name}`,
-              description: `${re.supplier?.name || ''} - ${re.expense.frequency}`,
-              startDate: eventDate,
-              endDate: eventDate,
-              amount: re.expense.amount,
-              supplier: re.supplier,
-              frequency: re.expense.frequency,
-            });
+            // Verificar se a data está no período
+            if (eventDate >= sDate && eventDate <= eDate) {
+              allEvents.push({
+                type: 'recurring',
+                id: `recurring-${re.expense.id}-${year}-${month}`,
+                title: `[Despesa Recorrente] ${re.expense.name}`,
+                description: `${re.supplier?.name || ''} - ${re.expense.frequency}`,
+                startDate: eventDate,
+                endDate: eventDate,
+                amount: re.expense.amount,
+                supplier: re.supplier,
+                frequency: re.expense.frequency,
+              });
+            }
           }
         }
       }
     });
   }
 
-  // Ordenar todos os eventos por data
-  allEvents.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  // Ordenar todos os eventos por data de forma robusta
+  allEvents.sort((a, b) => {
+    const timeA = a.startDate ? new Date(a.startDate).getTime() : 0;
+    const timeB = b.startDate ? new Date(b.startDate).getTime() : 0;
+    return timeA - timeB;
+  });
 
+  console.log(`[Calendar] Consolidation complete. Total events: ${allEvents.length}`);
   return allEvents;
 }
 
