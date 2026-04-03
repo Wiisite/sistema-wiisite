@@ -146,6 +146,7 @@ function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: an
   const isTask = event?.type === 'task';
   const hasChecklist = isTask && event?.checklistTotal > 0;
   const progressValue = hasChecklist ? Math.round((event.checklistCompleted / event.checklistTotal) * 100) : 0;
+  const eventColor = eventTypeColors[event?.type] || eventTypeColors[event?.eventType] || "bg-gray-500";
 
   return (
     <div
