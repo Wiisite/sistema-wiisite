@@ -161,26 +161,36 @@ function DashboardLayoutContent({
           className="border-r-0"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
-            <div className="flex items-center gap-3 px-2 transition-all w-full">
-              {companyLogo ? (
-                <img src={companyLogo} alt="Logo" className="h-8 w-8 object-contain shrink-0" />
-              ) : (
-                <button
-                  onClick={toggleSidebar}
-                  className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-                  aria-label="Toggle navigation"
-                >
-                  <PanelLeft className="h-4 w-4 text-muted-foreground" />
-                </button>
-              )}
+          <SidebarHeader className="h-16 border-b shrink-0 overflow-hidden">
+            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-2 px-2 h-full transition-all duration-300 relative`}>
               {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    {companyName || 'ERP System'}
-                  </span>
+                <>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {companyLogo ? (
+                      <img src={companyLogo} alt="Logo" className="h-8 w-8 object-contain shrink-0" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <LayoutDashboard className="h-5 w-5 text-primary" />
+                      </div>
+                    )}
+                    <span className="font-semibold tracking-tight truncate">
+                      {companyName || 'ERP System'}
+                    </span>
+                  </div>
+                  <SidebarTrigger className="h-8 w-8 shrink-0 opacity-70 hover:opacity-100 hover:bg-accent transition-all duration-200" />
+                </>
+              ) : (
+                <div className="relative h-8 w-8 flex items-center justify-center">
+                  {companyLogo ? (
+                    <>
+                      <img src={companyLogo} alt="Logo" className="h-8 w-8 object-contain shrink-0 group-hover:opacity-0 transition-opacity" />
+                      <SidebarTrigger className="h-8 w-8 absolute inset-0 opacity-0 group-hover:opacity-100 hover:bg-accent transition-all" />
+                    </>
+                  ) : (
+                    <SidebarTrigger className="h-8 w-8 hover:bg-accent transition-all" />
+                  )}
                 </div>
-              ) : null}
+              )}
             </div>
           </SidebarHeader>
 

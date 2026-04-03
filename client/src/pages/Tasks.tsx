@@ -73,15 +73,15 @@ function TaskCard({ item, onEdit, onDelete, onOpenChecklist, isDragging }: TaskC
     <Card
       ref={setNodeRef}
       style={style}
-      className="p-3 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+      className={`p-3 hover:shadow-md transition-shadow cursor-pointer active:cursor-grabbing group relative ${isSortableDragging ? 'z-50' : ''}`}
+      onClick={() => onEdit(item.task)}
+      {...attributes}
+      {...listeners}
     >
       <div className="space-y-2">
         <div className="flex items-start gap-2">
-          <div {...attributes} {...listeners} className="mt-1 cursor-grab active:cursor-grabbing">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
           <div className="flex-1 space-y-2">
-            <h4 className="font-semibold text-sm line-clamp-2">{item.task.title}</h4>
+            <h4 className="font-semibold text-sm line-clamp-2 pr-6">{item.task.title}</h4>
             {item.task.description && (
               <p className="text-xs text-muted-foreground line-clamp-2">{item.task.description}</p>
             )}
@@ -111,42 +111,42 @@ function TaskCard({ item, onEdit, onDelete, onOpenChecklist, isDragging }: TaskC
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 {onOpenChecklist && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0"
+                    className="h-7 w-7 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     onClick={(e) => {
                       e.stopPropagation();
                       onOpenChecklist(item);
                     }}
                     title="Checklist"
                   >
-                    <CheckSquare className="h-3 w-3 text-blue-600" />
+                    <CheckSquare className="h-4 w-4 text-blue-600" />
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(item.task);
                   }}
                 >
-                  <Edit2 className="h-3 w-3" />
+                  <Edit2 className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                  className="h-7 w-7 p-0 text-destructive hover:text-white hover:bg-destructive"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(item.task.id);
                   }}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
