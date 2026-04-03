@@ -1034,11 +1034,14 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
 
   // Adicionar despesas recorrentes (gerar eventos para os próximos meses)
   if (filters?.startDate && filters?.endDate) {
+    const sDate = filters.startDate;
+    const eDate = filters.endDate;
+    
     recurringExpensesData.forEach(re => {
-      const startMonth = filters.startDate!.getMonth();
-      const startYear = filters.startDate!.getFullYear();
-      const endMonth = filters.endDate!.getMonth();
-      const endYear = filters.endDate!.getFullYear();
+      const startMonth = sDate.getMonth();
+      const startYear = sDate.getFullYear();
+      const endMonth = eDate.getMonth();
+      const endYear = eDate.getFullYear();
 
       // Gerar evento para cada mês no período
       for (let year = startYear; year <= endYear; year++) {

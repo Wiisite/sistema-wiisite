@@ -238,7 +238,7 @@ export default function CalendarPage() {
   const updateTaskMutation = trpc.tasks.update.useMutation({
     onSuccess: () => {
       toast.success("Tarefa movida com sucesso!");
-      utils.tasks.list.invalidate();
+      utils.calendar.events.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao mover tarefa: " + error.message);
@@ -248,7 +248,7 @@ export default function CalendarPage() {
   const updatePayableMutation = trpc.accountsPayable.update.useMutation({
     onSuccess: () => {
       toast.success("Vencimento atualizado!");
-      utils.calendar.financialAlerts.invalidate();
+      utils.calendar.events.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao mover conta: " + error.message);
@@ -258,7 +258,7 @@ export default function CalendarPage() {
   const updateReceivableMutation = trpc.accountsReceivable.update.useMutation({
     onSuccess: () => {
       toast.success("Vencimento atualizado!");
-      utils.calendar.financialAlerts.invalidate();
+      utils.calendar.events.invalidate();
     },
     onError: (error) => {
       toast.error("Erro ao mover conta: " + error.message);
@@ -459,11 +459,13 @@ export default function CalendarPage() {
   }, [startDate, endDate]);
 
   const getEventsForDate = (date: Date) => {
-    if (!events) return [];
+    if (!events || !Array.isArray(events)) return [];
 
     return events.filter((event: any) => {
+      if (!event.startDate) return false;
       const eventDate = new Date(event.startDate);
       return (
+        !isNaN(eventDate.getTime()) &&
         eventDate.getDate() === date.getDate() &&
         eventDate.getMonth() === date.getMonth() &&
         eventDate.getFullYear() === date.getFullYear()
