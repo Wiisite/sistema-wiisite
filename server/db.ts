@@ -856,7 +856,7 @@ export async function deleteProject(id: number) {
 
 // ============ CALENDAR EVENT HELPERS ============
 
-export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: Date }) {
+export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: Date; projectId?: number; customerId?: number }) {
   const db = await getDb();
   if (!db) return [];
 
@@ -869,11 +869,20 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
     .leftJoin(customers, eq(calendarEvents.customerId, customers.id))
     .leftJoin(projects, eq(calendarEvents.projectId, projects.id));
 
-  const events = filters?.startDate && filters?.endDate
-    ? await eventsBaseQuery.where(and(
-      gte(calendarEvents.startDate, filters.startDate),
-      lte(calendarEvents.endDate, filters.endDate)
-    )).orderBy(calendarEvents.startDate)
+  const eventConditions = [];
+  if (filters?.startDate && filters?.endDate) {
+    eventConditions.push(gte(calendarEvents.startDate, filters.startDate));
+    eventConditions.push(lte(calendarEvents.endDate, filters.endDate));
+  }
+  if (filters?.projectId) {
+    eventConditions.push(eq(calendarEvents.projectId, filters.projectId));
+  }
+  if (filters?.customerId) {
+    eventConditions.push(eq(calendarEvents.customerId, filters.customerId));
+  }
+
+  const events = eventConditions.length > 0 
+    ? await eventsBaseQuery.where(and(...eventConditions)).orderBy(calendarEvents.startDate)
     : await eventsBaseQuery.orderBy(calendarEvents.startDate);
 
   // Buscar tarefas com prazo
@@ -883,11 +892,19 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
   }).from(tasks)
     .leftJoin(projects, eq(tasks.projectId, projects.id));
 
-  const tasksData = filters?.startDate && filters?.endDate
-    ? await tasksBaseQuery.where(and(
-      gte(tasks.dueDate, filters.startDate),
-      lte(tasks.dueDate, filters.endDate)
-    )).orderBy(tasks.dueDate)
+  const taskConditions = [];
+  if (filters?.startDate && filters?.endDate) {
+    taskConditions.push(gte(tasks.dueDate, filters.startDate));
+    taskConditions.push(lte(tasks.dueDate, filters.endDate));
+  }
+  if (filters?.projectId) {
+    taskConditions.push(eq(tasks.projectId, filters.projectId));
+  }
+  // Tarefas não têm customerId direto, mas podemos filtrar pelo projeto se soubermos o cliente do projeto
+  // Por enquanto, o filtro de customerId ignorará tarefas a menos que queiramos fazer um join extra
+
+  const tasksData = taskConditions.length > 0
+    ? await tasksBaseQuery.where(and(...taskConditions)).orderBy(tasks.dueDate)
     : await tasksBaseQuery.orderBy(tasks.dueDate);
 
   // Buscar contas a pagar com vencimento
@@ -899,11 +916,17 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
     .leftJoin(suppliers, eq(accountsPayable.supplierId, suppliers.id))
     .leftJoin(financialCategories, eq(accountsPayable.categoryId, financialCategories.id));
 
-  const payables = filters?.startDate && filters?.endDate
-    ? await payablesBaseQuery.where(and(
-      gte(accountsPayable.dueDate, filters.startDate),
-      lte(accountsPayable.dueDate, filters.endDate)
-    )).orderBy(accountsPayable.dueDate)
+  const payableConditions = [];
+  if (filters?.startDate && filters?.endDate) {
+    payableConditions.push(gte(accountsPayable.dueDate, filters.startDate));
+    payableConditions.push(lte(accountsPayable.dueDate, filters.endDate));
+  }
+  // Contas a pagar não têm projectId ou customerId direto na maioria dos casos (são por fornecedor)
+  // Mas se o filtro for global de projeto, talvez queiramos filtrar? 
+  // Na estrutura atual, deixaremos passar se não houver campo direto.
+
+  const payables = payableConditions.length > 0
+    ? await payablesBaseQuery.where(and(...payableConditions)).orderBy(accountsPayable.dueDate)
     : await payablesBaseQuery.orderBy(accountsPayable.dueDate);
 
   // Buscar contas a receber com vencimento
@@ -915,20 +938,29 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
     .leftJoin(customers, eq(accountsReceivable.customerId, customers.id))
     .leftJoin(orders, eq(accountsReceivable.orderId, orders.id));
 
-  const receivables = filters?.startDate && filters?.endDate
-    ? await receivablesBaseQuery.where(and(
-      gte(accountsReceivable.dueDate, filters.startDate),
-      lte(accountsReceivable.dueDate, filters.endDate)
-    )).orderBy(accountsReceivable.dueDate)
+  const receivableConditions = [];
+  if (filters?.startDate && filters?.endDate) {
+    receivableConditions.push(gte(accountsReceivable.dueDate, filters.startDate));
+    receivableConditions.push(lte(accountsReceivable.dueDate, filters.endDate));
+  }
+  if (filters?.customerId) {
+    receivableConditions.push(eq(accountsReceivable.customerId, filters.customerId));
+  }
+
+  const receivables = receivableConditions.length > 0
+    ? await receivablesBaseQuery.where(and(...receivableConditions)).orderBy(accountsReceivable.dueDate)
     : await receivablesBaseQuery.orderBy(accountsReceivable.dueDate);
 
   // Buscar despesas recorrentes ativas
+  const recurringConditions = [eq(recurringExpenses.status, "active")];
+  // Despesas recorrentes geralmente não têm filtros de projeto/cliente fáceis sem join
+  
   const recurringExpensesData = await db.select({
     expense: recurringExpenses,
     supplier: suppliers,
   }).from(recurringExpenses)
     .leftJoin(suppliers, eq(recurringExpenses.supplierId, suppliers.id))
-    .where(eq(recurringExpenses.status, "active"));
+    .where(and(...recurringConditions));
 
   // Consolidar todos os eventos
   const allEvents: any[] = [];

@@ -205,21 +205,11 @@ export default function CalendarPage() {
   const { data: events, refetch } = trpc.calendar.events.useQuery({
     startDate,
     endDate,
-  });
-
-  const { data: financialAlerts } = trpc.calendar.financialAlerts.useQuery({
-    year: currentDate.getFullYear(),
-    month: currentDate.getMonth() + 1,
+    projectId: filterProjectId !== "all" ? parseInt(filterProjectId) : undefined,
   });
 
   const { data: customers } = trpc.customers.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
-  
-  // Buscar tarefas do projeto selecionado
-  const { data: projectTasks } = trpc.tasks.list.useQuery(
-    { projectId: filterProjectId !== "all" ? parseInt(filterProjectId) : undefined },
-    { enabled: true }
-  );
 
   const createMutation = trpc.calendar.create.useMutation({
     onSuccess: () => {
@@ -469,95 +459,16 @@ export default function CalendarPage() {
   }, [startDate, endDate]);
 
   const getEventsForDate = (date: Date) => {
-    const result: any[] = [];
-    
-    // Adicionar eventos do calendário
-    if (events) {
-      const filteredEvents = events.filter((event: any) => {
-        const eventDate = new Date(event.startDate);
-        const dateMatches = 
-          eventDate.getDate() === date.getDate() &&
-          eventDate.getMonth() === date.getMonth() &&
-          eventDate.getFullYear() === date.getFullYear();
-        
-        // Filtrar por projeto se selecionado
-        if (filterProjectId !== "all") {
-          const projectIdNum = parseInt(filterProjectId);
-          return dateMatches && event.projectId === projectIdNum;
-        }
-        
-        return dateMatches;
-      }).map((event: any) => ({ ...event, type: 'event' }));
-      result.push(...filteredEvents);
-    }
-    
-    // Adicionar tarefas
-    if (projectTasks) {
-      const tasksForDate = projectTasks.filter((item: any) => {
-        if (!item.task.dueDate) return false;
-        const taskDate = new Date(item.task.dueDate);
-        const matchesDate = 
-          taskDate.getDate() === date.getDate() &&
-          taskDate.getMonth() === date.getMonth() &&
-          taskDate.getFullYear() === date.getFullYear();
+    if (!events) return [];
 
-        if (filterProjectId !== "all") {
-          return matchesDate && item.task.projectId === parseInt(filterProjectId);
-        }
-        return matchesDate;
-      }).map((item: any) => ({
-        id: item.task.id,
-        title: `[Tarefa] ${item.task.title}`,
-        startDate: item.task.dueDate,
-        type: 'task',
-        status: item.task.status,
-        priority: item.task.priority,
-        originalTask: item,
-      }));
-      result.push(...tasksForDate);
-    }
-
-    // Adicionar financeiro (Payables)
-    if (financialAlerts?.payables) {
-      const payablesForDate = financialAlerts.payables.filter((item: any) => {
-        const itemDate = new Date(item.accountPayable.dueDate);
-        return (
-          itemDate.getDate() === date.getDate() &&
-          itemDate.getMonth() === date.getMonth() &&
-          itemDate.getFullYear() === date.getFullYear()
-        );
-      }).map((item: any) => ({
-        id: item.accountPayable.id,
-        title: `💰 ${item.supplier?.name || 'Despesa'}`,
-        startDate: item.accountPayable.dueDate,
-        amount: item.accountPayable.amount,
-        type: 'payable',
-        originalItem: item,
-      }));
-      result.push(...payablesForDate);
-    }
-
-    // Adicionar financeiro (Receivables)
-    if (financialAlerts?.receivables) {
-      const receivablesForDate = financialAlerts.receivables.filter((item: any) => {
-        const itemDate = new Date(item.accountReceivable.dueDate);
-        return (
-          itemDate.getDate() === date.getDate() &&
-          itemDate.getMonth() === date.getMonth() &&
-          itemDate.getFullYear() === date.getFullYear()
-        );
-      }).map((item: any) => ({
-        id: item.accountReceivable.id,
-        title: `💵 ${item.customer?.name || 'Receita'}`,
-        startDate: item.accountReceivable.dueDate,
-        amount: item.accountReceivable.amount,
-        type: 'receivable',
-        originalItem: item,
-      }));
-      result.push(...receivablesForDate);
-    }
-    
-    return result;
+    return events.filter((event: any) => {
+      const eventDate = new Date(event.startDate);
+      return (
+        eventDate.getDate() === date.getDate() &&
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getFullYear() === date.getFullYear()
+      );
+    });
   };
 
   const monthNames = [

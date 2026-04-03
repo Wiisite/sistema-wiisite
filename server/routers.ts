@@ -561,6 +561,8 @@ export const appRouter = router({
       .input(z.object({
         startDate: z.date().optional(),
         endDate: z.date().optional(),
+        projectId: z.number().optional(),
+        customerId: z.number().optional(),
       }).optional())
       .query(async ({ input }) => {
         return await getCalendarEvents(input);
