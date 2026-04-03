@@ -1548,12 +1548,21 @@ export async function getTasks(filters?: { status?: TaskStatus; projectId?: numb
     .leftJoin(projects, eq(tasks.projectId, projects.id))
     .leftJoin(users, eq(tasks.assignedTo, users.id));
 
-  // Ordenar por data de vencimento (mais próximas primeiro), depois por data de criação
-  if (conditions.length > 0) {
-    return await baseQuery.where(and(...conditions)).orderBy(tasks.dueDate, desc(tasks.createdAt));
-  }
+  const tasksData = conditions.length > 0
+    ? await baseQuery.where(and(...conditions)).orderBy(tasks.dueDate, desc(tasks.createdAt))
+    : await baseQuery.orderBy(tasks.dueDate, desc(tasks.createdAt));
 
-  return await baseQuery.orderBy(tasks.dueDate, desc(tasks.createdAt));
+  // Buscar progresso de checklists para cada tarefa
+  return await Promise.all(
+    tasksData.map(async (t) => {
+      const checklists = await db.select().from(taskChecklists).where(eq(taskChecklists.taskId, t.task.id));
+      return {
+        ...t,
+        checklistTotal: checklists.length,
+        checklistCompleted: checklists.filter(c => c.completed === 1).length,
+      };
+    })
+  );
 }
 
 export async function createTask(data: InsertTask) {

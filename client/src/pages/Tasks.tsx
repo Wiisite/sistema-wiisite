@@ -73,93 +73,110 @@ function TaskCard({ item, onEdit, onDelete, onOpenChecklist, isDragging }: TaskC
     <Card
       ref={setNodeRef}
       style={style}
-      className={`p-3 hover:shadow-md transition-shadow cursor-pointer active:cursor-grabbing group relative ${isSortableDragging ? 'z-50' : ''}`}
+      className={`p-4 hover:shadow-lg transition-all cursor-pointer active:cursor-grabbing group relative border-l-4 ${
+        item.task.priority === 'urgent' ? 'border-l-red-500' : 
+        item.task.priority === 'high' ? 'border-l-orange-500' : 
+        item.task.priority === 'medium' ? 'border-l-blue-500' : 'border-l-slate-300'
+      } ${isSortableDragging ? 'z-50' : ''}`}
       onClick={() => onEdit(item.task)}
       {...attributes}
       {...listeners}
     >
-      <div className="space-y-2">
-        <div className="flex items-start gap-2">
-          <div className="flex-1 space-y-2">
-            <h4 className="font-semibold text-sm line-clamp-2 pr-6">{item.task.title}</h4>
-            {item.task.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2">{item.task.description}</p>
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-between items-start gap-2">
+          <h4 className="font-bold text-sm leading-tight flex-1">{item.task.title}</h4>
+          <div className="flex items-center gap-1 shrink-0 bg-white/50 dark:bg-slate-900/50 p-0.5 rounded backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            {onOpenChecklist && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenChecklist(item);
+                }}
+                title="Checklist"
+              >
+                <CheckSquare className="h-4 w-4 text-blue-600" />
+              </Button>
             )}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[item.task.priority as TaskPriority]}`}
-                >
-                  {item.task.priority === "low" && "Baixa"}
-                  {item.task.priority === "medium" && "Média"}
-                  {item.task.priority === "high" && "Alta"}
-                  {item.task.priority === "urgent" && "Urgente"}
-                </span>
-                {item.task.startDate && (
-                  <span className="text-xs flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-3 w-3 text-blue-500" />
-                    {new Date(item.task.startDate).toLocaleDateString("pt-BR")}
-                  </span>
-                )}
-                {(item.task.startDate && item.task.dueDate) && (
-                  <span className="text-xs text-muted-foreground">→</span>
-                )}
-                {item.task.dueDate && (
-                  <span className="text-xs flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-3 w-3 text-red-500" />
-                    {new Date(item.task.dueDate).toLocaleDateString("pt-BR")}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                {onOpenChecklist && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenChecklist(item);
-                    }}
-                    title="Checklist"
-                  >
-                    <CheckSquare className="h-4 w-4 text-blue-600" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(item.task);
-                  }}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-destructive hover:text-white hover:bg-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(item.task.id);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            {item.task.notes && (
-              <div className="mt-1 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-800 dark:text-yellow-300">
-                <div className="flex items-start gap-1">
-                  <StickyNote className="h-3 w-3 mt-0.5 shrink-0" />
-                  <p className="line-clamp-3 whitespace-pre-line">{item.task.notes}</p>
-                </div>
-              </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(item.task);
+              }}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-white hover:bg-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(item.task.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {item.task.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{item.task.description}</p>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+          <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${priorityColors[item.task.priority as TaskPriority]}`}>
+            {item.task.priority === "low" && "Baixa"}
+            {item.task.priority === "medium" && "Média"}
+            {item.task.priority === "high" && "Alta"}
+            {item.task.priority === "urgent" && "Urgente"}
+          </span>
+
+          <div className="flex items-center gap-2">
+            {item.task.startDate && (
+              <span className="text-[10px] flex items-center gap-1 text-muted-foreground">
+                <Calendar className="h-3 w-3 text-blue-500" />
+                {new Date(item.task.startDate).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit' })}
+              </span>
+            )}
+            {item.task.dueDate && (
+              <span className="text-[10px] flex items-center gap-1 text-muted-foreground">
+                <Calendar className="h-3 w-3 text-red-500" />
+                {new Date(item.task.dueDate).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit' })}
+              </span>
             )}
           </div>
         </div>
+
+        {item.checklistTotal > 0 && (
+          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between items-center text-[10px]">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <CheckSquare className="h-3 w-3" />
+                Checklist
+              </span>
+              <span className="font-semibold">{item.checklistCompleted}/{item.checklistTotal}</span>
+            </div>
+            <Progress 
+              value={Math.round((item.checklistCompleted / item.checklistTotal) * 100)} 
+              className="h-1.5" 
+            />
+          </div>
+        )}
+
+        {item.task.notes && (
+          <div className="mt-1 p-2 bg-yellow-50 dark:bg-yellow-950/10 border border-yellow-200/50 dark:border-yellow-800/30 rounded text-[10px] text-yellow-800 dark:text-yellow-300">
+            <div className="flex items-start gap-1">
+              <StickyNote className="h-3 w-3 mt-0.5 shrink-0 opacity-70" />
+              <p className="line-clamp-2 whitespace-pre-line">{item.task.notes}</p>
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );
