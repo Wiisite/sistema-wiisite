@@ -986,7 +986,10 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
     }
   });
 
+  console.log(`[Calendar] Fetched ${events.length} core events`);
+
   // Adicionar tarefas
+  console.log(`[Calendar] Fetched ${tasksData.length} tasks`);
   tasksData.forEach(t => {
     if (t.task.dueDate) {
       allEvents.push({
@@ -1004,6 +1007,7 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
   });
 
   // Adicionar contas a pagar
+  console.log(`[Calendar] Fetched ${payables.length} payables`);
   payables.forEach(p => {
     if (p.payable.dueDate) {
       allEvents.push({
@@ -1022,6 +1026,7 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
   });
 
   // Adicionar contas a receber
+  console.log(`[Calendar] Fetched ${receivables.length} receivables`);
   receivables.forEach(r => {
     if (r.receivable.dueDate) {
       allEvents.push({

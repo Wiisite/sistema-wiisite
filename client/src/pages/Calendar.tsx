@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { ChevronLeft, ChevronRight, Download, Edit2, ExternalLink, MapPin, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Download, Edit2, ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -224,14 +224,20 @@ export default function CalendarPage() {
   const endDate = new Date(lastDay);
   endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
 
-  const { data: events, refetch } = trpc.calendar.events.useQuery({
+  const { data: events, refetch, error: eventsError } = trpc.calendar.events.useQuery({
     startDate,
     endDate,
     projectId: filterProjectId !== "all" ? parseInt(filterProjectId) : undefined,
   });
 
-  const { data: customers } = trpc.customers.list.useQuery();
-  const { data: projects } = trpc.projects.list.useQuery();
+  const { data: customers, error: customersError } = trpc.customers.list.useQuery();
+  const { data: projects, error: projectsError } = trpc.projects.list.useQuery();
+
+  useEffect(() => {
+    if (eventsError) console.error("[Calendar] Events Load Error:", eventsError);
+    if (customersError) console.error("[Calendar] Customers Load Error:", customersError);
+    if (projectsError) console.error("[Calendar] Projects Load Error:", projectsError);
+  }, [eventsError, customersError, projectsError]);
 
   const createMutation = trpc.calendar.create.useMutation({
     onSuccess: () => {
@@ -643,7 +649,7 @@ export default function CalendarPage() {
                         <SelectValue placeholder="Selecione um cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                        {customers?.map((customer) => (
+                        {customers?.filter(c => c?.id)?.map((customer) => (
                           <SelectItem key={customer.id} value={customer.id.toString()}>
                             {customer.name}
                           </SelectItem>
