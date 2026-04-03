@@ -21,7 +21,7 @@ import {
   DragStartEvent,
   DragOverEvent,
   PointerSensor,
-  closestCorners,
+  closestCenter,
   useSensor,
   useSensors,
   useDroppable,
@@ -404,8 +404,17 @@ export default function Tasks() {
     const validStatuses: TaskStatus[] = ["todo", "in_progress", "review", "done", "cancelled"];
     if (validStatuses.includes(id as TaskStatus)) return id as TaskStatus;
 
-    const item = (tasks || []).find((item) => item.task.id === (typeof id === 'string' ? parseInt(id) : id));
-    return item?.task.status as TaskStatus;
+    // Se o ID for de uma tarefa, encontrar qual o status original dela
+    const item = (tasks || []).find((t) => t.task.id === (typeof id === 'string' ? parseInt(id) : id));
+    if (item) return item.task.status as TaskStatus;
+
+    // Tentar encontrar pelo map de status se não for status direto nem tarefa ID
+    // Isso ajuda quando o overId é o SortableContext ou DroppableColumn
+    for (const status of validStatuses) {
+      if (status === id) return status as TaskStatus;
+    }
+
+    return null;
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -415,7 +424,7 @@ export default function Tasks() {
     const activeId = active.id;
     const overId = over.id;
 
-    // Encontrar os containers
+    // Encontrar os containers de origem e destino
     const activeContainer = findContainer(activeId);
     const overContainer = findContainer(overId);
 
@@ -423,14 +432,17 @@ export default function Tasks() {
       return;
     }
 
-    // Mover o item entre containers no cache otimista
+    // Atualizar o cache local imediatamente para o card "pular" para a nova coluna
     utils.tasks.list.setData(undefined, (old: any) => {
       if (!old) return old;
-      return old.map((item: any) =>
+      
+      const newTasks = old.map((item: any) =>
         item.task.id === activeId
           ? { ...item, task: { ...item.task, status: overContainer } }
           : item
       );
+      
+      return newTasks;
     });
   };
 
@@ -438,19 +450,22 @@ export default function Tasks() {
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over) return;
+    if (!over) {
+      // Se soltar fora de qualquer container, o onSettled do useMutation vai refetch
+      // e o card voltará para a posição correta no servidor.
+      return;
+    }
 
     const taskId = active.id as number;
     const overId = over.id;
 
-    const activeContainer = findContainer(taskId);
     const overContainer = findContainer(overId);
+    
+    // Buscar o status real no BD para comparar
+    const originalTask = (tasks || []).find(t => t.task.id === taskId);
+    const originalStatus = originalTask?.task.status;
 
-    if (!activeContainer || !overContainer) return;
-
-    // Se mudou de container ou de posição, persistir no servidor
-    // Por enquanto persistimos apenas a mudança de status
-    if (activeContainer !== overContainer) {
+    if (overContainer && originalStatus !== overContainer) {
       updateMutation.mutate({
         id: taskId,
         data: {
@@ -566,7 +581,7 @@ export default function Tasks() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
