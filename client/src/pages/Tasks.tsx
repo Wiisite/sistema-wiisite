@@ -13,19 +13,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { toast } from "sonner";
+import { CSS } from "@dnd-kit/utilities";
 import {
   DndContext,
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  DragOverEvent,
   PointerSensor,
   closestCorners,
   useSensor,
   useSensors,
   useDroppable,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 
 type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
 type TaskPriority = "low" | "medium" | "high" | "urgent";
@@ -238,14 +239,44 @@ export default function Tasks() {
     },
   });
 
+  const utils = trpc.useUtils();
+
   const updateMutation = trpc.tasks.update.useMutation({
+    onMutate: async ({ id, data }) => {
+      // Cancelar refetches em andamento para não sobrescrever o estado otimista
+      await utils.tasks.list.cancel();
+
+      // Salvar o estado anterior
+      const previousTasks = utils.tasks.list.getData();
+
+      // Atualizar o cache otimisticamente
+      if (previousTasks && data.status) {
+        utils.tasks.list.setData(undefined, (old: any) => {
+          if (!old) return old;
+          return old.map((item: any) => 
+            item.task.id === id 
+              ? { ...item, task: { ...item.task, status: data.status, completedDate: data.status === "done" ? new Date() : item.task.completedDate } }
+              : item
+          );
+        });
+      }
+
+      return { previousTasks };
+    },
+    onError: (err, newTodo, context) => {
+      // Reverter se houver erro
+      if (context?.previousTasks) {
+        utils.tasks.list.setData(undefined, context.previousTasks);
+      }
+      toast.error(`Erro ao ${editingTask ? "atualizar" : "mover"} tarefa: ${err.message}`);
+    },
     onSuccess: () => {
       toast.success(editingTask ? "Tarefa atualizada com sucesso!" : "Tarefa movida com sucesso!");
-      refetch();
-      setEditingTask(null);
     },
-    onError: (error) => {
-      toast.error(`Erro ao ${editingTask ? "atualizar" : "mover"} tarefa: ${error.message}`);
+    onSettled: () => {
+      // Sempre refetch no final para garantir sincronia
+      utils.tasks.list.invalidate();
+      setEditingTask(null);
     },
   });
 
@@ -369,6 +400,40 @@ export default function Tasks() {
     setActiveId(event.active.id as number);
   };
 
+  const findContainer = (id: string | number) => {
+    const validStatuses: TaskStatus[] = ["todo", "in_progress", "review", "done", "cancelled"];
+    if (validStatuses.includes(id as TaskStatus)) return id as TaskStatus;
+
+    const item = (tasks || []).find((item) => item.task.id === (typeof id === 'string' ? parseInt(id) : id));
+    return item?.task.status as TaskStatus;
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    // Encontrar os containers
+    const activeContainer = findContainer(activeId);
+    const overContainer = findContainer(overId);
+
+    if (!activeContainer || !overContainer || activeContainer === overContainer) {
+      return;
+    }
+
+    // Mover o item entre containers no cache otimista
+    utils.tasks.list.setData(undefined, (old: any) => {
+      if (!old) return old;
+      return old.map((item: any) =>
+        item.task.id === activeId
+          ? { ...item, task: { ...item.task, status: overContainer } }
+          : item
+      );
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -376,36 +441,21 @@ export default function Tasks() {
     if (!over) return;
 
     const taskId = active.id as number;
-    let newStatus = over.id as string;
+    const overId = over.id;
 
-    // Validar se o newStatus é um status válido
-    const validStatuses: TaskStatus[] = ["todo", "in_progress", "review", "done", "cancelled"];
-    
-    // Se over.id não é um status válido, é porque foi solto sobre uma tarefa
-    // Nesse caso, precisamos encontrar o status da tarefa sobre a qual foi solto
-    if (!validStatuses.includes(newStatus as TaskStatus)) {
-      const targetTask = (tasks || []).find((item) => item.task.id === parseInt(newStatus));
-      if (targetTask) {
-        newStatus = targetTask.task.status as string;
-      } else {
-        console.error("Não foi possível determinar o status da coluna");
-        return;
-      }
-    }
+    const activeContainer = findContainer(taskId);
+    const overContainer = findContainer(overId);
 
-    // Encontrar a tarefa atual
-    const currentTask = (tasks || []).find((item) => item.task.id === taskId);
-    if (!currentTask) return;
+    if (!activeContainer || !overContainer) return;
 
-    const currentStatus = currentTask.task.status as TaskStatus;
-
-    // Se mudou de coluna, atualizar o status
-    if (currentStatus !== newStatus) {
+    // Se mudou de container ou de posição, persistir no servidor
+    // Por enquanto persistimos apenas a mudança de status
+    if (activeContainer !== overContainer) {
       updateMutation.mutate({
         id: taskId,
         data: {
-          status: newStatus as TaskStatus,
-          completedDate: newStatus === "done" ? new Date() : undefined,
+          status: overContainer,
+          completedDate: overContainer === "done" ? new Date() : undefined,
         },
       });
     }
@@ -518,6 +568,7 @@ export default function Tasks() {
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
