@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, Download, Edit2, ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -142,7 +143,9 @@ function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: an
     zIndex: isDragging ? 100 : 1,
   };
 
-  const eventColor = eventTypeColors[event?.type] || eventTypeColors[event?.eventType] || "bg-gray-500";
+  const isTask = event?.type === 'task';
+  const hasChecklist = isTask && event?.checklistTotal > 0;
+  const progressValue = hasChecklist ? Math.round((event.checklistCompleted / event.checklistTotal) * 100) : 0;
 
   return (
     <div
@@ -150,18 +153,34 @@ function DraggableCalendarItem({ event, onClick }: { event: any, onClick: (e: an
       style={style}
       {...listeners}
       {...attributes}
-      className={`text-xs px-2 py-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all ${eventColor} touch-none`}
+      className={`text-[10px] sm:text-xs px-2 py-1.5 rounded text-white overflow-hidden cursor-pointer hover:opacity-90 transition-all ${eventColor} touch-none flex flex-col gap-1 min-h-[2.5rem] shadow-sm`}
       onClick={onClick}
     >
-      {event?.type === 'event' && event?.startDate && (
-        <span className="mr-1">
-          {new Date(event.startDate).toLocaleTimeString("pt-BR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
+      <div className="flex items-center gap-1 min-w-0">
+        {event?.type === 'event' && event?.startDate && (
+          <span className="shrink-0 font-medium opacity-90">
+            {new Date(event.startDate).toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        )}
+        <span className="truncate flex-1 font-semibold">{event?.title || 'Sem título'}</span>
+      </div>
+
+      {hasChecklist && (
+        <div className="mt-auto space-y-1">
+          <div className="flex items-center justify-between text-[8px] sm:text-[10px] leading-none opacity-90">
+            <span>Checklist</span>
+            <span>{event.checklistCompleted}/{event.checklistTotal}</span>
+          </div>
+          <Progress 
+            value={progressValue} 
+            className="h-1 bg-white/20" 
+            indicatorClassName="bg-white" 
+          />
+        </div>
       )}
-      {event?.title || 'Sem título'}
     </div>
   );
 }
@@ -778,8 +797,22 @@ export default function CalendarPage() {
             
             <DragOverlay>
               {activeItem ? (
-                <div className={`text-xs px-2 py-1 rounded text-white truncate shadow-lg ${activeItem?.type ? (eventTypeColors[activeItem.type] || 'bg-gray-500') : 'bg-gray-500'}`}>
-                  {activeItem?.title || 'Sem título'}
+                <div className={`text-[10px] sm:text-xs px-2 py-1.5 rounded text-white shadow-lg flex flex-col gap-1 min-h-[2.5rem] w-full max-w-[200px] ${activeItem?.type ? (eventTypeColors[activeItem.type] || 'bg-gray-500') : 'bg-gray-500'}`}>
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span className="truncate flex-1 font-semibold">{activeItem?.title || 'Sem título'}</span>
+                  </div>
+                  {activeItem?.type === 'task' && activeItem?.checklistTotal > 0 && (
+                    <div className="mt-auto space-y-1">
+                      <div className="flex items-center justify-between text-[8px] sm:text-[10px] leading-none opacity-80">
+                        <span>Checklist {activeItem.checklistCompleted}/{activeItem.checklistTotal}</span>
+                      </div>
+                      <Progress 
+                        value={Math.round((activeItem.checklistCompleted / activeItem.checklistTotal) * 100)} 
+                        className="h-1 bg-white/20" 
+                        indicatorClassName="bg-white" 
+                      />
+                    </div>
+                  )}
                 </div>
               ) : null}
             </DragOverlay>

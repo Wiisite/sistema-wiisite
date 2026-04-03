@@ -988,9 +988,20 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
 
   console.log(`[Calendar] Fetched ${events.length} core events`);
 
-  // Adicionar tarefas
-  console.log(`[Calendar] Fetched ${tasksData.length} tasks`);
-  tasksData.forEach(t => {
+  // Buscar progresso de checklists para as tarefas
+  const tasksWithChecklist = await Promise.all(
+    tasksData.map(async (t) => {
+      const checklists = await db.select().from(taskChecklists).where(eq(taskChecklists.taskId, t.task.id));
+      return {
+        ...t,
+        checklistTotal: checklists.length,
+        checklistCompleted: checklists.filter(c => c.completed === 1).length,
+      };
+    })
+  );
+
+  console.log(`[Calendar] Fetched ${tasksWithChecklist.length} tasks with checklist data`);
+  tasksWithChecklist.forEach(t => {
     if (t.task.dueDate) {
       allEvents.push({
         type: 'task',
@@ -1002,6 +1013,8 @@ export async function getCalendarEvents(filters?: { startDate?: Date; endDate?: 
         status: t.task.status,
         priority: t.task.priority,
         project: t.project,
+        checklistTotal: t.checklistTotal,
+        checklistCompleted: t.checklistCompleted,
       });
     }
   });
