@@ -205,6 +205,7 @@ export default function Tasks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [dragStartStatus, setDragStartStatus] = useState<TaskStatus | null>(null);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [newChecklistItem, setNewChecklistItem] = useState("");
@@ -397,7 +398,14 @@ export default function Tasks() {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as number);
+    const taskId = event.active.id as number;
+    setActiveId(taskId);
+    
+    // Capturar o status original para comparação no fim do drag
+    const task = (tasks || []).find(t => t.task.id === taskId);
+    if (task) {
+      setDragStartStatus(task.task.status as TaskStatus);
+    }
   };
 
   const findContainer = (id: string | number) => {
@@ -451,8 +459,7 @@ export default function Tasks() {
     setActiveId(null);
 
     if (!over) {
-      // Se soltar fora de qualquer container, o onSettled do useMutation vai refetch
-      // e o card voltará para a posição correta no servidor.
+      setDragStartStatus(null);
       return;
     }
 
@@ -461,11 +468,8 @@ export default function Tasks() {
 
     const overContainer = findContainer(overId);
     
-    // Buscar o status real no BD para comparar
-    const originalTask = (tasks || []).find(t => t.task.id === taskId);
-    const originalStatus = originalTask?.task.status;
-
-    if (overContainer && originalStatus !== overContainer) {
+    // Comparar com o status que tínhamos no INÍCIO do arrasto
+    if (overContainer && dragStartStatus !== overContainer) {
       updateMutation.mutate({
         id: taskId,
         data: {
@@ -474,6 +478,8 @@ export default function Tasks() {
         },
       });
     }
+    
+    setDragStartStatus(null);
   };
 
   const tasksByStatus = (tasks || []).reduce((acc, item) => {
