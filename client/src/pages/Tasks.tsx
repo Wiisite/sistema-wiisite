@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { AlertCircle, Calendar, CheckCircle2, CheckSquare, Clock, GripVertical, ListTodo, Plus, Edit2, Trash2, X, StickyNote } from "lucide-react";
+import { AlertCircle, Calendar, CheckCircle2, CheckSquare, Clock, GripVertical, ListTodo, Plus, Edit2, Trash2, X, StickyNote, Wrench, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
@@ -35,11 +35,11 @@ type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
 type TaskPriority = "low" | "medium" | "high" | "urgent";
 
 const statusConfig: Record<TaskStatus, { label: string; icon: any; color: string }> = {
-  todo: { label: "A Fazer", icon: ListTodo, color: "bg-gray-100 text-gray-700 border-gray-300" },
-  in_progress: { label: "Em Progresso", icon: Clock, color: "bg-blue-100 text-blue-700 border-blue-300" },
-  review: { label: "Em Revisão", icon: AlertCircle, color: "bg-yellow-100 text-yellow-700 border-yellow-300" },
-  done: { label: "Concluído", icon: CheckCircle2, color: "bg-green-100 text-green-700 border-green-300" },
-  cancelled: { label: "Cancelado", icon: AlertCircle, color: "bg-red-100 text-red-700 border-red-300" },
+  todo: { label: "A Fazer", icon: ListTodo, color: "bg-slate-100 text-slate-700 border-slate-300" },
+  in_progress: { label: "Em Processo", icon: Clock, color: "bg-blue-100 text-blue-700 border-blue-300" },
+  review: { label: "Produção", icon: Wrench, color: "bg-orange-100 text-orange-700 border-orange-300" },
+  done: { label: "Em Revisão", icon: Search, color: "bg-yellow-100 text-yellow-700 border-yellow-300" },
+  cancelled: { label: "Concluído", icon: CheckCircle2, color: "bg-green-100 text-green-700 border-green-300" },
 };
 
 const priorityColors: Record<TaskPriority, string> = {
@@ -493,7 +493,7 @@ export default function Tasks() {
         id: taskId,
         data: {
           status: overContainer,
-          completedDate: overContainer === "done" ? new Date() : undefined,
+          completedDate: overContainer === "cancelled" ? new Date() : undefined,
         },
       });
     }
