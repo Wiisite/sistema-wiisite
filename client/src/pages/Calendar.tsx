@@ -419,7 +419,7 @@ export default function CalendarPage() {
       const newEnd = new Date(newStart.getTime() + diff);
       
       updateMutation.mutate({
-        id: item.id,
+        id: Number(item.id),
         data: {
           startDate: newStart,
           endDate: newEnd,
@@ -427,19 +427,19 @@ export default function CalendarPage() {
       });
     } else if (item.type === 'task') {
       updateTaskMutation.mutate({
-        id: item.id,
+        id: Number(item.id),
         data: {
           dueDate: newDate
         }
       });
     } else if (item.type === 'payable') {
       updatePayableMutation.mutate({
-        id: item.id,
+        id: Number(item.id),
         dueDate: newDate
       });
     } else if (item.type === 'receivable') {
       updateReceivableMutation.mutate({
-        id: item.id,
+        id: Number(item.id),
         dueDate: newDate
       });
     }
