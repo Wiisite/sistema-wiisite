@@ -1702,11 +1702,17 @@ export async function getTaskChecklists(taskId: number) {
     .orderBy(taskChecklists.order);
 }
 
-export async function createTaskChecklist(data: InsertTaskChecklist) {
+export async function createTaskChecklist(data: { taskId: number; title: string, order?: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(taskChecklists).values(data);
+  // Inserir explicitamente apenas os campos necessários para evitar problemas com colunas que possuem defaults
+  const result = await db.insert(taskChecklists).values({
+    taskId: data.taskId,
+    title: data.title,
+    order: data.order ?? 0,
+    completed: 0,
+  });
   return result;
 }
 
